@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plot – Allotment community</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <nav class="side" aria-label="Main">
+    <div class="brand">Plot</div>
+    <a href="#home" data-nav="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Home</a>
+    <a href="#profile" data-nav="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</a>
+    <a href="#settings" data-nav="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.7a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 000 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.7h4l.4-2.7a7 7 0 002-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>Settings</a>
+    <a href="#support" data-nav="support"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .6-1.5 1-1.5 2M12 17h.01"/></svg>Support</a>
+  </nav>
+
+  <main>
+
+    <!-- 1. MAIN PAGE -->
+    <section id="home" aria-labelledby="home-h">
+      <h1 id="home-h">What's growing?</h1>
+      <p class="sub">Updates from gardeners at Riverside Allotments.</p>
+
+      <div class="card composer">
+        <div class="avatar">M</div>
+        <div style="flex:1">
+          <textarea id="newPost" placeholder="Share a harvest, a question, or a swap offer" aria-label="New post"></textarea>
+          <div style="margin-top:.6rem; text-align:right"><button class="btn" id="publish">Publish</button></div>
+        </div>
+      </div>
+
+      <div class="feed" id="feed"></div>
+    </section>
+
+    <!-- 2. POST VIEW PAGE -->
+    <section id="post" aria-labelledby="post-h" hidden>
+      <button class="back" onclick="location.hash='#home'">← Back to feed</button>
+      <article class="card">
+        <div class="post-head">
+          <div class="avatar" id="pv-avatar"></div>
+          <div><strong id="pv-author"></strong><div class="meta" id="pv-time"></div></div>
+        </div>
+        <h1 id="post-h"></h1>
+        <span class="tag" id="pv-tag"></span>
+        <div class="post-body" id="pv-body" style="margin-top:1rem"></div>
+        <div class="actions">
+          <button class="btn ghost" id="pv-like"></button>
+          <button class="btn ghost" id="pv-save">Save post</button>
+          <button class="btn ghost" id="pv-share">Copy link</button>
+        </div>
+        <h2 id="pv-count"></h2>
+        <div id="pv-comments"></div>
+        <div class="comment-form">
+          <input id="commentInput" placeholder="Write a comment" aria-label="Write a comment">
+          <button class="btn" id="commentBtn">Comment</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- 3. USER PROFILE -->
+    <section id="profile" aria-labelledby="profile-h" hidden>
+      <div class="profile-head">
+        <div class="avatar lg">M</div>
+        <div>
+          <h1 id="profile-h">Maya Okafor</h1>
+          <div class="meta">Plot 14 · Gardening since 2019</div>
+        </div>
+        <button class="btn ghost" style="margin-left:auto" onclick="location.hash='#settings'">Edit profile</button>
+      </div>
+      <div class="card">
+        <p>Growing tomatoes, beans and far too much mint. Always happy to swap seedlings in spring.</p>
+        <div class="stats">
+          <div><strong>38</strong><span class="meta">Posts</span></div>
+          <div><strong>212</strong><span class="meta">Followers</span></div>
+          <div><strong>96</strong><span class="meta">Following</span></div>
+        </div>
+      </div>
+      <h2 style="margin:1.75rem 0 .25rem">My beds</h2>
+      <div class="plot-list">
+        <div class="card"><strong>Bed A</strong><div class="meta">Tomatoes, basil</div></div>
+        <div class="card"><strong>Bed B</strong><div class="meta">Runner beans</div></div>
+        <div class="card"><strong>Bed C</strong><div class="meta">Resting (clover)</div></div>
+      </div>
+      <h2 style="margin:1.75rem 0 1rem">Recent posts</h2>
+      <div class="feed" id="myPosts"></div>
+    </section>
+
+    <!-- 4. SETTINGS -->
+    <section id="settings" aria-labelledby="settings-h" hidden>
+      <h1 id="settings-h">Settings</h1>
+      <p class="sub">Manage your account and how Plot looks and notifies you.</p>
+      <div class="stack">
+        <div class="card">
+          <h2 style="margin-bottom:1rem">Account</h2>
+          <div class="field"><label for="s-name">Display name</label><input id="s-name" value="Maya Okafor"></div>
+          <div class="field"><label for="s-email">Email</label><input id="s-email" type="email" value="maya@example.com"></div>
+          <button class="btn" id="saveAccount">Save changes</button>
+        </div>
+
+        <div class="card">
+          <h2>Notifications</h2>
+          <div class="row"><div><strong>Replies to my posts</strong><div class="meta">Get an email when someone comments.</div></div><label class="switch"><input type="checkbox" checked aria-label="Replies to my posts"><span></span></label></div>
+          <div class="row"><div><strong>Seed swap alerts</strong><div class="meta">Know when neighbours list seeds.</div></div><label class="switch"><input type="checkbox" aria-label="Seed swap alerts"><span></span></label></div>
+          <div class="row"><div><strong>Weekly digest</strong><div class="meta">One email every Sunday.</div></div><label class="switch"><input type="checkbox" checked aria-label="Weekly digest"><span></span></label></div>
+        </div>
+
+        <div class="card">
+          <h2>Appearance</h2>
+          <div class="row"><div><strong>Dark mode</strong><div class="meta">Easier on the eyes in the evening.</div></div><label class="switch"><input type="checkbox" id="darkToggle" aria-label="Dark mode"><span></span></label></div>
+          <div class="row"><div><strong>Language</strong></div><select style="width:auto" aria-label="Language"><option>English</option><option>Español</option><option>Français</option></select></div>
+        </div>
+
+        <div class="card">
+          <h2 style="margin-bottom:.5rem">Danger zone</h2>
+          <p class="meta" style="margin-bottom:1rem">Deleting your account removes all of your posts and comments.</p>
+          <button class="btn danger" id="deleteAcc">Delete account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. CUSTOMER SUPPORT -->
+    <section id="support" aria-labelledby="support-h" hidden>
+      <h1 id="support-h">Support</h1>
+      <p class="sub">Find a quick answer, or message us. We reply within one working day.</p>
+      <div class="card" style="margin-bottom:1.25rem">
+        <h2 style="margin-bottom:.5rem">Common questions</h2>
+        <details><summary>How do I change my email address?</summary><p>Go to Settings, update your email under Account, and select Save changes. We'll send a confirmation link to the new address.</p></details>
+        <details><summary>How do I report a post?</summary><p>Open the post and use the menu in its top corner to select Report. A moderator reviews it within 24 hours.</p></details>
+        <details><summary>Can I hide my profile from non-members?</summary><p>Yes. Profiles are only visible to signed-in members of your allotment group.</p></details>
+        <details><summary>I forgot my password</summary><p>On the sign-in screen, select Forgot password and follow the link we email you.</p></details>
+      </div>
+      <div class="card">
+        <h2 style="margin-bottom:1rem">Contact us</h2>
+        <div class="field"><label for="c-topic">Topic</label>
+          <select id="c-topic"><option>Account</option><option>Report a problem</option><option>Billing</option><option>Something else</option></select></div>
+        <div class="field"><label for="c-msg">Message</label><textarea id="c-msg" rows="5" placeholder="Tell us what's happening"></textarea></div>
+        <button class="btn" id="sendSupport">Send message</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ---------- Data (in memory) ----------
+  const posts = [
+    { id: 1, author: "Tomas Reyes", title: "First ripe Cherokee Purples of the year", tag: "Harvest", time: "2 hours ago", likes: 24,
+      body: ["Picked four this morning. The cool nights seem to have slowed everything down, but the flavour is worth the wait.", "I started these under a cloche in March. If anyone wants to know the feeding schedule I used, ask below and I'll write it up."],
+      comments: [{ a: "Maya Okafor", t: "Gorgeous. What variety of basil are you pairing them with?" }, { a: "Priya Nair", t: "Jealous! Mine are still green." }] },
+    { id: 2, author: "Maya Okafor", title: "Free runner bean seedlings this Saturday", tag: "Swap", time: "Yesterday", likes: 17,
+      body: ["I over-sowed again. I have about 30 seedlings ready to go at Plot 14, 10am to noon.", "Bring a pot if you can. In return, I'm always looking for chives or lemon balm."],
+      comments: [{ a: "Tomas Reyes", t: "I'll take six, thank you!" }] },
+    { id: 3, author: "Priya Nair", title: "Slugs are eating my lettuce. What works?", tag: "Question", time: "2 days ago", likes: 9,
+      body: ["I've tried beer traps and crushed shells with no luck. The damage happens overnight.", "Open to anything that doesn't harm the hedgehogs."],
+      comments: [] }
+  ];
+  const saved = new Set();
+  const liked = new Set();
+  let current = null;
+
+  const $ = s => document.querySelector(s);
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const initial = n => n.trim()[0].toUpperCase();
+
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast.id); toast.id = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  // ---------- Feed ----------
+  function postCard(p) {
+    return `<button class="card post" data-id="${p.id}">
+      <div class="post-head"><div class="avatar">${initial(p.author)}</div>
+        <div><strong>${esc(p.author)}</strong><div class="meta">${p.time}</div></div></div>
+      <h3>${esc(p.title)}</h3><span class="tag">${p.tag}</span>
+      <div class="post-foot meta"><span>${p.likes} likes</span><span>${p.comments.length} comments</span></div>
+    </button>`;
+  }
+  function renderFeed() {
+    $("#feed").innerHTML = posts.map(postCard).join("");
+    const mine = posts.filter(p => p.author === "Maya Okafor");
+    $("#myPosts").innerHTML = mine.length ? mine.map(postCard).join("") : `<p class="meta">No posts yet. Share something from the Home page.</p>`;
+    document.querySelectorAll(".post").forEach(el => el.onclick = () => location.hash = "#post/" + el.dataset.id);
+  }
+
+  $("#publish").onclick = () => {
+    const v = $("#newPost").value.trim();
+    if (!v) return toast("Write something before publishing");
+    const title = v.length > 70 ? v.slice(0, 67) + "…" : v;
+    posts.unshift({ id: Date.now(), author: "Maya Okafor", title, tag: "Update", time: "Just now", likes: 0, body: [v], comments: [] });
+    $("#newPost").value = ""; renderFeed(); toast("Published");
+  };
+
+  // ---------- Post view ----------
+  function renderPost() {
+    const p = current; if (!p) return;
+    $("#pv-avatar").textContent = initial(p.author);
+    $("#pv-author").textContent = p.author;
+    $("#pv-time").textContent = p.time;
+    $("#post-h").textContent = p.title;
+    $("#pv-tag").textContent = p.tag;
+    $("#pv-body").innerHTML = p.body.map(t => `<p>${esc(t)}</p>`).join("");
+    $("#pv-like").textContent = (liked.has(p.id) ? "Liked · " : "Like · ") + p.likes;
+    $("#pv-save").textContent = saved.has(p.id) ? "Saved" : "Save post";
+    $("#pv-count").textContent = p.comments.length + (p.comments.length === 1 ? " comment" : " comments");
+    $("#pv-comments").innerHTML = p.comments.map(c => `<div class="comment"><div class="avatar">${initial(c.a)}</div><div><strong>${esc(c.a)}</strong><p>${esc(c.t)}</p></div></div>`).join("");
+  }
+  $("#pv-like").onclick = () => { const p = current; liked.has(p.id) ? (liked.delete(p.id), p.likes--) : (liked.add(p.id), p.likes++); renderPost(); renderFeed(); };
+  $("#pv-save").onclick = () => { saved.has(current.id) ? saved.delete(current.id) : saved.add(current.id); renderPost(); toast(saved.has(current.id) ? "Saved" : "Removed from saved"); };
+  $("#pv-share").onclick = () => { navigator.clipboard?.writeText(location.href).catch(() => {}); toast("Link copied"); };
+  $("#commentBtn").onclick = () => {
+    const v = $("#commentInput").value.trim();
+    if (!v) return toast("Write a comment first");
+    current.comments.push({ a: "Maya Okafor", t: v }); $("#commentInput").value = ""; renderPost(); renderFeed(); toast("Comment posted");
+  };
+
+  // ---------- Settings & support ----------
+  $("#darkToggle").onchange = e => document.body.classList.toggle("dark", e.target.checked);
+  $("#saveAccount").onclick = () => {
+    const n = $("#s-name").value.trim();
+    if (!n) return toast("Enter a display name");
+    $("#profile-h").textContent = n; toast("Changes saved");
+  };
+  $("#deleteAcc").onclick = () => confirm("Delete your account? This can't be undone.") && toast("Account deletion requested");
+  $("#sendSupport").onclick = () => {
+    if (!$("#c-msg").value.trim()) return toast("Add a message so we can help");
+    $("#c-msg").value = ""; toast("Message sent. We'll reply by email");
+  };
+
+  // ---------- Router ----------
+  function route() {
+    const [page, id] = (location.hash.slice(1) || "home").split("/");
+    const target = ["home", "post", "profile", "settings", "support"].includes(page) ? page : "home";
+    if (target === "post") { current = posts.find(p => p.id == id); if (!current) return location.hash = "#home"; renderPost(); }
+    document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== target);
+    const navKey = target === "post" ? "home" : target;
+    document.querySelectorAll("nav a").forEach(a => a.classList.toggle("active", a.dataset.nav === navKey));
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", route);
+  renderFeed(); route();
+</script>
+</body>
+</html>
