@@ -1,5 +1,5 @@
     <?php
-    session_start();
+    /*session_start();
 
     // Redirect unauthenticated users back to login
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
@@ -26,8 +26,8 @@
             header('Location: /login.php');
             exit();
     }
-?>
-
+*/
+    ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

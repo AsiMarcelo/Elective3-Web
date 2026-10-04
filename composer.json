@@ -2,7 +2,8 @@
     "require": {
         "gemini-api-php/client": "^1.7",
         "symfony/http-client": "^8.1",
-        "nyholm/psr7": "^1.8"
+        "nyholm/psr7": "^1.8",
+        "vlucas/phpdotenv": "^5.7"
     },
     "config": {
         "allow-plugins": {

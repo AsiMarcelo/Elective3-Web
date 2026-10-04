@@ -1,2 +1,2 @@
 # Elective3-Web
-Activity
+A website application designed for employers to easily find possible applicants for the company's workforce.
