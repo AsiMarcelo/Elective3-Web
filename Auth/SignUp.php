@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)");
         $stmt->execute([$fullName, $email, $hashedPassword, $role]);
         $newUserId = $pdo->lastInsertId();
-        */
+        
 
         // For demonstration, assume user ID 102 was created:
         $newUserId = 102;
@@ -66,11 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <meta charset="UTF-8">
     <title>Create an Account</title>
 </head>
 <body>
-    <h2>Sign Up</h2>
+    <h2 class="roboto-mono-roboFont">Sign Up</h2>
 
     <?php if (!empty($errors)): ?>
         <ul style="color: red;">
@@ -80,38 +84,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </ul>
     <?php endif; ?>
 
-    <form method="POST" action="register.php">
+    <form method="POST" action="SignUp.php">
         <div>
-            <label for="full_name">Full Name / Company Name:</label><br>
+            <label class="roboto-mono-roboFont" for="full_name">Full Name / Company Name:</label><br>
             <input type="text" id="full_name" name="full_name" required value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>">
         </div>
         <br>
 
         <div>
-            <label for="email">Email Address:</label><br>
+            <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
             <input type="email" id="email" name="email" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
         <br>
 
         <div>
-            <label for="password">Password:</label><br>
+            <label class="roboto-mono-roboFont" for="password">Password:</label><br>
             <input type="password" id="password" name="password" required minlength="8">
         </div>
         <br>
 
         <div>
-            <label>I am signing up as:</label><br>
+            <label class="roboto-mono-roboFont">I am signing up as:</label><br>
             <input type="radio" id="applicant" name="role" value="applicant" checked>
-            <label for="applicant">Job Applicant</label>
+            <label class="roboto-mono-roboFont" for="applicant">Job Applicant</label>
             <br>
             <input type="radio" id="employer" name="role" value="employer">
-            <label for="employer">Employer / Recruiter</label>
+            <label class="roboto-mono-roboFont" for="employer">Employer / Recruiter</label>
         </div>
         <br>
 
         <button type="submit">Create Account</button>
     </form>
 
-    <p>Already have an account? <a href="/login.php">Log in here</a>.</p>
+    <p class="roboto-mono-roboFont">Already have an account? <a href="/Auth/login.php">Log in here</a>.</p>
 </body>
 </html>

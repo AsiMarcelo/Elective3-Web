@@ -1,3 +1,7 @@
+/* ===================================================
+   Existing styles (kept as they were)
+   =================================================== */
+
 #logForm{
     text-align: center;
     align-items: top;
@@ -11,8 +15,9 @@
     font-optical-sizing: auto;
     font-weight: 300;
     font-style: normal;
-    color:#c11212;
+    /* red color removed: text colors are now set by the new design below */
 }
+
 .loginCard{
     display: flex;
     min-height: 100vh;
@@ -24,4 +29,124 @@
     max-width: 400px;
     margin: 0 auto;
     text-align: center;
+}
+
+:root {
+    --overlay-opacity: 0.5;   /* black overlay strength: 0 = none, 1 = solid black */
+    --maroon: #800000;
+    --turquoise: #40E0D0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Page: background image + black overlay, everything centered */
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: "Roboto Mono", monospace;
+    background-color: #222; /* fallback until your image exists */
+    background-image:
+        linear-gradient(rgba(0, 0, 0, var(--overlay-opacity)), rgba(0, 0, 0, var(--overlay-opacity))),
+        url("/Images/Skyline-Shot.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* SIGN UP heading */
+h2.roboto-mono-roboFont {
+    margin: 0 0 24px;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fff;
+    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.7);
+}
+
+/* Validation errors */
+ul {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+}
+
+/* The maroon rounded card */
+form {
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--maroon);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+form div {
+    width: 100%;
+}
+
+form .roboto-mono-roboFont {
+    color: #fff;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="password"] {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 14px;
+    font-family: inherit;
+    border: 2px solid transparent;
+    border-radius: 10px;
+}
+
+form input:focus {
+    outline: none;
+    border-color: var(--turquoise);
+}
+
+form input[type="radio"] {
+    margin-right: 8px;
+    accent-color: var(--turquoise);
+}
+
+button {
+    padding: 12px 28px;
+    font-family: inherit;
+    font-weight: 700;
+    color: var(--maroon);
+    background: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: var(--turquoise);
+    color: #3a0000;
+}
+
+/* "Already have an account?" text and link */
+p {
+    margin-top: 20px;
+    color: var(--turquoise);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+
+a,
+a:visited {
+    color: var(--turquoise);
+    font-weight: 700;
 }
