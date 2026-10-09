@@ -100,6 +100,15 @@ h2.roboto-mono-roboFont {
     box-sizing: border-box;
     padding: 20px;    
 }
+.rounded-rectangle h2 {
+    margin: 0;                  
+    padding: 0;        
+    line-height: 1;              
+    font-family: "Roboto Mono", monospace;
+    color: #ffffff;
+    font-size: 50px;            
+    font-weight: 700;
+}
 /* Validation errors */
 ul {
     list-style: none;
