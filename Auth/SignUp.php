@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Create an Account</title>
 </head>
 <body>
-    <h2 class="roboto-mono-roboFont">Sign Up</h2>
+    <h2 class="logForm">Sign Up</h2>
 
     <?php if (!empty($errors)): ?>
         <ul style="color: red;">

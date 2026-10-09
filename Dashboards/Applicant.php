@@ -1,4 +1,10 @@
 <?php
+session_start();
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'applicant') {
+    header('Location: /Auth/login.php');
+    exit();
+}
 
 $applicantName = "Juan Dela Cruz";
 $completeness = 80;

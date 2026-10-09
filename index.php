@@ -37,8 +37,8 @@
     <title>4Hire</title>
 </head>
 <body>
-   <!-- <a href="Dashboards/register.php">Register here</a></p>
-!-->
+    <!-- <a href="Dashboards/register.php">Register here</a></p>
+    !-->
 
 
 

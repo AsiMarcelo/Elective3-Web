@@ -1,4 +1,10 @@
 <?php
+session_start();
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+    header('Location: /Auth/login.php');
+    exit();
+}
 
 $stats = [
  ['label'=>'Total Applicants','value'=>'1,284','change'=>'+12.8%','icon'=>'♙','tone'=>'olive'],

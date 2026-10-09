@@ -1,4 +1,10 @@
 <?php
+session_start();
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'employer') {
+    header('Location: /Auth/login.php');
+    exit();
+}
 
 $companyName = "ABC Company";
 $employerName = "Employer Account";
