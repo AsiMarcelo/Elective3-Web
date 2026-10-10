@@ -4,9 +4,9 @@ vendor/
 
 ##Pa-update: 
 #DB_CONNECTION=pgsql
-#DB_HOST=
-#DB_PORT=
-#DB_DATABASE=
-#DB_USERNAME=
-#DB_PASSWORD=
+#DB_HOST=aws-0-ap-northeast-1.pooler.supabase.com
+#DB_PORT=5432
+#DB_DATABASE=postgres
+#DB_USERNAME=postgres.ohmxoxynawlzpzinwuvp
+#DB_PASSWORD=nauulolnakoputanginanyo 
 #PubKey= sb_publishable_PudTyeJR5RsqJed7BadIPQ_pfVqKLHX
