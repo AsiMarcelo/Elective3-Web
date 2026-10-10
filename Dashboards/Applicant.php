@@ -1,14 +1,42 @@
 <?php
-session_start();
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+startAppSession();
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'applicant') {
     header('Location: /Auth/login.php');
     exit();
 }
 
-$applicantName = "Juan Dela Cruz";
+$applicantName = $_SESSION['user_name'] ?? 'Applicant';
+$resume = null;
+try {
+    $pdo = getDbConnection();
+    $profile = $pdo->prepare(
+        'SELECT u.full_name, a.resume_original_name, a.resume_mime_type,
+                a.resume_size_bytes, a.resume_uploaded_at
+         FROM public.applicants a
+         JOIN public.users u ON u.id = a.user_id
+         WHERE a.user_id = :user_id'
+    );
+    $profile->execute(['user_id' => (int) $_SESSION['user_id']]);
+    $applicant = $profile->fetch();
+    if ($applicant) {
+        $applicantName = $applicant['full_name'] ?: $applicantName;
+        if (!empty($applicant['resume_original_name'])) {
+            $resume = [
+                'file' => $applicant['resume_original_name'],
+                'type' => strtoupper(pathinfo($applicant['resume_original_name'], PATHINFO_EXTENSION)),
+                'size' => number_format(((int) $applicant['resume_size_bytes']) / 1024) . ' KB',
+                'uploaded' => $applicant['resume_uploaded_at'] ? date('M d, Y', strtotime($applicant['resume_uploaded_at'])) : '',
+                'status' => 'Stored securely',
+            ];
+        }
+    }
+} catch (Throwable $e) {
+    error_log('Could not load applicant dashboard profile: ' . $e->getMessage());
+}
 $completeness = 80;
-$resume = ["file"=>"JuanDelaCruz_Resume.pdf","type"=>"PDF","size"=>"284 KB","uploaded"=>"Oct 04, 2026","status"=>"Analysis complete"];
 $allFields = ["Software Development","Web Development","Networking","Other / Unsure"];
 $suggestedField = "Web Development";           // stored separately from the confirmed fields
 $confirmedFields = ["Software Development","Web Development"];
@@ -19,6 +47,18 @@ $views = [
 ];
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function initials($n){ $w=preg_split('/\s+/',trim($n)); return strtoupper(substr($w[0],0,1).(count($w)>1?substr(end($w),0,1):'')); }
+$resumeNotices = [
+ 'uploaded' => 'Resume uploaded and linked to your applicant profile.',
+ 'deleted' => 'Resume deleted.',
+ 'missing' => 'There is no resume to download or delete.',
+ 'too_large' => 'The resume must be 5 MB or smaller.',
+ 'invalid_type' => 'Upload a valid PDF, DOC, or DOCX file.',
+ 'upload_error' => 'The upload did not complete. Try again.',
+ 'invalid' => 'That resume action was not valid.',
+ 'error' => 'Resume storage is not ready or the request failed. Check server configuration and logs.',
+];
+$resumeNotice = $resumeNotices[$_GET['resume'] ?? ''] ?? null;
+$csrf = csrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -182,7 +222,7 @@ button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-deco
  </section>
 
  <section class="stats" aria-label="Your summary">
-  <article class="stat-card"><div class="stat-icon olive"><i class="fa-solid fa-file-circle-check"></i></div><div class="stat-label">Resume</div><div class="stat-number" style="font-size:22px;margin-top:9px">Uploaded</div><div class="stat-change">Last updated <?= h($resume['uploaded']) ?></div></article>
+  <article class="stat-card"><div class="stat-icon olive"><i class="fa-solid fa-file-circle-check"></i></div><div class="stat-label">Resume</div><div class="stat-number" style="font-size:22px;margin-top:9px"><?= $resume ? 'Uploaded' : 'Not uploaded' ?></div><div class="stat-change"><?= $resume ? 'Last updated ' . h($resume['uploaded']) : 'Upload a PDF, DOC, or DOCX' ?></div></article>
   <article class="stat-card"><div class="stat-icon terracotta"><i class="fa-solid fa-eye"></i></div><div class="stat-label">Employer views</div><div class="stat-number"><?= count($views) ?></div><div class="stat-change">Verified employers only</div></article>
   <article class="stat-card"><div class="stat-icon sage"><i class="fa-solid fa-tags"></i></div><div class="stat-label">Confirmed fields</div><div class="stat-number" id="confirmedCount"><?= count($confirmedFields) ?></div><div class="stat-change">Shown to employers</div></article>
   <article class="stat-card"><div class="stat-icon cream"><i class="fa-solid fa-user-check"></i></div><div class="stat-label">Profile</div><div class="stat-number"><?= (int)$completeness ?>%</div><div class="stat-change">Complete</div></article>
@@ -192,20 +232,36 @@ button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-deco
   <section class="card" id="resume">
    <div class="card-header"><h2 class="card-title">My Resume</h2><p class="card-subtitle">One resume at a time. Stored privately; only verified employers can open it.</p></div>
    <div class="card-body">
+    <?php if ($resumeNotice): ?><p role="status" style="margin-bottom:14px;padding:12px;border-radius:10px;background:var(--sage)"><?= h($resumeNotice) ?></p><?php endif; ?>
+    <?php if ($resume): ?>
     <div class="file-row">
      <div class="file-icon"><i class="fa-solid fa-file-pdf"></i></div>
      <div class="file-info"><strong id="fileName"><?= h($resume['file']) ?></strong><small><span id="fileMeta"><?= h($resume['type'].' · '.$resume['size'].' · Uploaded '.$resume['uploaded']) ?></span></small></div>
      <span class="status" id="fileStatus"><?= h($resume['status']) ?></span>
     </div>
+    <?php else: ?>
+    <p style="margin:0 0 14px;color:var(--muted-text)">You have not uploaded a resume yet.</p>
+    <?php endif; ?>
     <ul class="steps" aria-label="Resume processing">
-     <li><span class="step-dot"><i class="fa-solid fa-check"></i></span>Uploaded to private storage</li>
-     <li><span class="step-dot"><i class="fa-solid fa-check"></i></span>Text read from your resume</li>
-     <li id="stepAi"><span class="step-dot"><i class="fa-solid fa-check"></i></span>Job field suggested</li>
+     <li class="<?= $resume ? '' : 'todo' ?>"><span class="step-dot"><?= $resume ? '<i class="fa-solid fa-check"></i>' : '1' ?></span>Stored in private resume storage</li>
+     <li class="todo"><span class="step-dot">2</span>Text extraction is not connected yet</li>
+     <li class="todo" id="stepAi"><span class="step-dot">3</span>AI field suggestion is not connected yet</li>
     </ul>
-    <label class="dropzone"><i class="fa-solid fa-cloud-arrow-up"></i><strong>Replace your resume</strong>Drop a PDF or DOCX here, or click to browse (max 5 MB)<input type="file" id="resumeInput" accept=".pdf,.doc,.docx"></label>
+    <form method="post" action="/Auth/Resume.php" enctype="multipart/form-data">
+     <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
+     <input type="hidden" name="action" value="upload">
+     <label class="dropzone"><i class="fa-solid fa-cloud-arrow-up"></i><strong><?= $resume ? 'Replace your resume' : 'Upload your resume' ?></strong>Select a PDF, DOC, or DOCX file (max 5 MB)<input type="file" id="resumeInput" name="resume" accept=".pdf,.doc,.docx" required></label>
+     <div class="btn-row"><button class="btn" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Save resume</button></div>
+    </form>
     <div class="btn-row">
-     <button class="btn outline" data-action="Download your resume"><i class="fa-solid fa-download"></i>Download</button>
-     <button class="btn danger" id="deleteResume"><i class="fa-solid fa-trash"></i>Delete resume</button>
+     <?php if ($resume): ?>
+     <a class="btn outline" href="/Auth/Resume.php?action=download"><i class="fa-solid fa-download"></i>Download</a>
+     <form method="post" action="/Auth/Resume.php" onsubmit="return confirm('Delete your stored resume? This cannot be undone.');">
+      <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
+      <input type="hidden" name="action" value="delete">
+      <button class="btn danger" type="submit"><i class="fa-solid fa-trash"></i>Delete resume</button>
+     </form>
+     <?php endif; ?>
     </div>
    </div>
   </section>
@@ -258,13 +314,9 @@ function updateCount(){document.getElementById('confirmedCount').textContent=chi
 chips.forEach(c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true')}));
 document.getElementById('acceptSuggestion').addEventListener('click',()=>{chips.find(c=>c.dataset.field===<?= json_encode($suggestedField) ?>)?.setAttribute('aria-pressed','true');showToast('Suggestion selected. Confirm your fields to save.')});
 document.getElementById('saveFields').addEventListener('click',()=>{const n=chips.filter(c=>c.getAttribute('aria-pressed')==='true').length;if(!n){showToast('Select at least one field, or choose Other / Unsure.');return}updateCount();showToast('Fields confirmed (demo only).')});
-document.getElementById('resumeInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;if(f.size>5*1024*1024){showToast('File is larger than 5 MB.');e.target.value='';return}
- document.getElementById('fileName').textContent=f.name;document.getElementById('fileMeta').textContent=Math.max(1,Math.round(f.size/1024))+' KB · Uploaded just now';
- const s=document.getElementById('fileStatus');s.textContent='Analyzing…';s.classList.add('working');showToast('Resume uploaded. Suggesting a job field…');
- setTimeout(()=>{s.textContent='Analysis complete';s.classList.remove('working');showToast('New field suggestion ready (demo only).')},1800)});
+document.getElementById('resumeInput').addEventListener('change',e=>{const f=e.target.files[0];if(f&&f.size>5*1024*1024){showToast('File is larger than 5 MB.');e.target.value='';return}if(f)showToast('Ready to upload '+f.name+'. Press Save resume to store it.');});
 document.getElementById('visibility').addEventListener('click',e=>{const b=e.currentTarget,on=b.getAttribute('aria-checked')!=='true';b.setAttribute('aria-checked',on);showToast(on?'Your resume is visible to verified employers.':'Your resume is hidden from employers.')});
 document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.action+' — connect this to your backend.')));
-document.getElementById('deleteResume').addEventListener('click',()=>{if(confirm('Delete your resume? Employers will no longer be able to find you.'))showToast('Resume deleted (demo only).')});
 document.getElementById('deleteAccount').addEventListener('click',()=>{if(confirm('Delete your account and all data? This cannot be undone.'))showToast('Account deleted (demo only).')});
 document.getElementById('logout').addEventListener('click',()=>showToast('Demo logout — connect this to your logout route.'));
 </script>
