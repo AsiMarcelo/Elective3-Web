@@ -1,29 +1,112 @@
 <?php
-session_start();
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+startAppSession();
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header('Location: /Auth/login.php');
     exit();
 }
 
+$pdo = getDbConnection();
+$reviewMessage = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $employerId = filter_var($_POST['employer_id'] ?? null, FILTER_VALIDATE_INT);
+    $decision = $_POST['decision'] ?? '';
+    $notes = trim($_POST['review_notes'] ?? '');
+    if (!validCsrfToken($_POST['csrf_token'] ?? null)) {
+        $reviewMessage = 'Your form session expired. Refresh the page and try again.';
+    } elseif (!$employerId || !in_array($decision, ['approve', 'reject'], true) || strlen($notes) > 1000) {
+        $reviewMessage = 'That verification decision was not valid.';
+    } else {
+        try {
+            $status = $decision === 'approve' ? 'verified' : 'rejected';
+            $update = $pdo->prepare(
+                'UPDATE public.employers
+                 SET verification_status = :status,
+                     verification_reviewed_at = CURRENT_TIMESTAMP,
+                     verification_reviewed_by = :admin_id,
+                     verification_notes = :notes
+                 WHERE id = :employer_id'
+            );
+            $update->execute([
+                'status' => $status,
+                'admin_id' => (int) $_SESSION['user_id'],
+                'notes' => $notes !== '' ? $notes : null,
+                'employer_id' => $employerId,
+            ]);
+            $reviewMessage = $update->rowCount() === 1
+                ? 'Employer verification updated: ' . ucfirst($status) . '.'
+                : 'Employer record not found.';
+        } catch (Throwable $e) {
+            error_log('Employer verification review failed: ' . $e->getMessage());
+            $reviewMessage = 'Could not save the verification decision. Check that the verification migration has been run.';
+        }
+    }
+}
+
+$applicantCount = (int) $pdo->query('SELECT COUNT(*) FROM public.applicants')->fetchColumn();
+$employerCount = (int) $pdo->query('SELECT COUNT(*) FROM public.employers')->fetchColumn();
+$pendingCount = (int) $pdo->query("SELECT COUNT(*) FROM public.employers WHERE verification_status = 'pending'")->fetchColumn();
+$verifiedCount = (int) $pdo->query("SELECT COUNT(*) FROM public.employers WHERE verification_status = 'verified'")->fetchColumn();
 $stats = [
- ['label'=>'Total Applicants','value'=>'1,284','change'=>'+12.8%','icon'=>'♙','tone'=>'olive'],
- ['label'=>'Employer Accounts','value'=>'86','change'=>'+6 this week','icon'=>'▣','tone'=>'terracotta'],
- ['label'=>'Pending Verification','value'=>'12','change'=>'Needs review','icon'=>'◷','tone'=>'cream'],
- ['label'=>'Active Job Posts','value'=>'143','change'=>'Across all employers','icon'=>'▤','tone'=>'sage'],
+ ['label'=>'Total Applicants','value'=>number_format($applicantCount),'change'=>'From applicant profiles','icon'=>'♙','tone'=>'olive'],
+ ['label'=>'Employer Accounts','value'=>number_format($employerCount),'change'=>'From employer profiles','icon'=>'▣','tone'=>'terracotta'],
+ ['label'=>'Pending Verification','value'=>number_format($pendingCount),'change'=>'Needs review','icon'=>'◷','tone'=>'cream'],
+ ['label'=>'Verified Employers','value'=>number_format($verifiedCount),'change'=>'Approved accounts','icon'=>'✓','tone'=>'sage'],
 ];
-$employers = [
- ['company'=>'Northstar Digital Solutions','email'=>'hr@northstardigital.ph','date'=>'Oct 08, 2026','status'=>'Pending','initials'=>'ND','color'=>'olive'],
- ['company'=>'BrightPath Technologies','email'=>'careers@brightpath.ph','date'=>'Oct 07, 2026','status'=>'Pending','initials'=>'BT','color'=>'terracotta'],
- ['company'=>'Cloudline Systems Inc.','email'=>'people@cloudline.ph','date'=>'Oct 06, 2026','status'=>'Verified','initials'=>'CS','color'=>'cream'],
- ['company'=>'Vertex Network Services','email'=>'jobs@vertexnet.ph','date'=>'Oct 05, 2026','status'=>'Rejected','initials'=>'VN','color'=>'sage'],
-];
-$activities = [
- ['icon'=>'✓','title'=>'Employer account verified','detail'=>'Cloudline Systems Inc.','time'=>'12 min ago','tone'=>'sage'],
- ['icon'=>'↑','title'=>'New resume uploaded','detail'=>'Applicant ID #A-1048','time'=>'38 min ago','tone'=>'olive'],
- ['icon'=>'▤','title'=>'Job post reported','detail'=>'Junior Web Developer · Post #J-219','time'=>'1 hour ago','tone'=>'terracotta'],
- ['icon'=>'◈','title'=>'AI field suggestion confirmed','detail'=>'Applicant ID #A-1032','time'=>'2 hours ago','tone'=>'cream'],
-];
+$employerQuery = $pdo->query(
+    "SELECT e.id, e.company_name, e.contact_number, e.verification_status,
+            e.verification_submitted_at, e.verification_notes, u.email
+     FROM public.employers e
+     JOIN public.users u ON u.id = e.user_id
+     ORDER BY CASE WHEN e.verification_status = 'pending' THEN 0 ELSE 1 END,
+              e.verification_submitted_at DESC, e.id DESC"
+);
+$employers = [];
+$colors = ['olive', 'terracotta', 'cream', 'sage'];
+foreach ($employerQuery->fetchAll() as $index => $employer) {
+    $company = (string) $employer['company_name'];
+    $words = preg_split('/\s+/', trim($company)) ?: [];
+    $initials = strtoupper(substr($words[0] ?? 'E', 0, 1) . (count($words) > 1 ? substr(end($words), 0, 1) : ''));
+    $employers[] = [
+        'id' => (int) $employer['id'],
+        'company' => $company,
+        'email' => (string) $employer['email'],
+        'contact' => (string) ($employer['contact_number'] ?? ''),
+        'date' => $employer['verification_submitted_at'] ? date('M d, Y', strtotime($employer['verification_submitted_at'])) : '—',
+        'status' => ucfirst((string) $employer['verification_status']),
+        'notes' => (string) ($employer['verification_notes'] ?? ''),
+        'initials' => $initials,
+        'color' => $colors[$index % count($colors)],
+    ];
+}
+$adminName = (string) ($_SESSION['user_name'] ?? 'Administrator');
+$adminInitials = strtoupper(substr($adminName, 0, 1));
+$csrf = csrfToken();
+$activityQuery = $pdo->query(
+    "SELECT e.company_name, e.verification_status, e.verification_reviewed_at,
+            reviewer.full_name AS reviewer_name
+     FROM public.employers e
+     LEFT JOIN public.users reviewer ON reviewer.id = e.verification_reviewed_by
+     WHERE e.verification_reviewed_at IS NOT NULL
+     ORDER BY e.verification_reviewed_at DESC
+     LIMIT 4"
+);
+$activities = [];
+foreach ($activityQuery->fetchAll() as $activity) {
+    $status = (string) $activity['verification_status'];
+    $activities[] = [
+        'icon' => $status === 'verified' ? '✓' : '×',
+        'title' => 'Employer marked ' . ucfirst($status),
+        'detail' => $activity['company_name'] . ' · reviewed by ' . ($activity['reviewer_name'] ?: 'administrator'),
+        'time' => date('M d, Y H:i', strtotime($activity['verification_reviewed_at'])),
+        'tone' => $status === 'verified' ? 'sage' : 'terracotta',
+    ];
+}
+if (!$activities) {
+    $activities[] = ['icon'=>'·','title'=>'No verification decisions yet','detail'=>'Reviews you make will appear here.','time'=>'—','tone'=>'cream'];
+}
 $fields = [['Software Development',42,'olive'],['Web Development',28,'terracotta'],['Networking',18,'sage'],['Other / Unsure',12,'cream']];
 ?>
 <!DOCTYPE html>
@@ -143,6 +226,10 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
 .action-btn:hover{background:var(--soft-olive)}
 .action-btn.review-btn{background:var(--terracotta);border-color:var(--terracotta)}
 .action-btn.review-btn:hover{background:color-mix(in srgb,var(--terracotta) 85%,var(--dark-text))}
+.review-form{min-width:190px;display:grid;gap:7px}
+.review-form textarea{width:100%;min-height:52px;resize:vertical;border:1px solid var(--border-color);border-radius:7px;padding:7px;font-size:11px;color:var(--dark-text)}
+.review-form>div{display:flex;gap:6px;flex-wrap:wrap}
+.review-note{display:block;max-width:220px;margin-top:5px;color:var(--muted-text);white-space:normal}
 
 /* Bottom */
 .bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:22px}
@@ -174,7 +261,7 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
  <div class="nav-label">WORKSPACE</div>
  <nav class="nav" aria-label="Main navigation">
   <a class="active" href="#dashboard" data-section="Dashboard"><span class="nav-icon">▦</span>Dashboard</a>
-  <a href="#employers" data-section="Employer Verification"><span class="nav-icon">♙</span>Employer Verification <span class="nav-count">12</span></a>
+  <a href="#employers" data-section="Employer Verification"><span class="nav-icon">♙</span>Employer Verification <span class="nav-count"><?= $pendingCount ?></span></a>
   <a href="#applicants" data-section="Applicants"><span class="nav-icon">♧</span>Applicants</a>
   <a href="#jobs" data-section="Job Posts"><span class="nav-icon">▤</span>Job Posts</a>
   <a href="#resumes" data-section="Resume Management"><span class="nav-icon">▧</span>Resume Management</a>
@@ -187,8 +274,8 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
   <a href="#settings" data-section="Settings"><span class="nav-icon">⚙</span>Settings</a>
  </nav>
  <div class="sidebar-bottom">
-  <nav class="nav"><a href="#help" data-section="Help Center"><span class="nav-icon">?</span>Help Center</a><a href="#logout" id="logout"><span class="nav-icon">⇥</span>Log out</a></nav>
-  <div class="admin-mini"><div class="avatar">AD</div><div><div class="admin-name">Admin User</div><div class="admin-role">System Administrator</div></div></div>
+  <nav class="nav"><a href="#help" data-section="Help Center"><span class="nav-icon">?</span>Help Center</a><a href="/Auth/logout.php" id="logout"><span class="nav-icon">⇥</span>Log out</a></nav>
+  <div class="admin-mini"><div class="avatar"><?= htmlspecialchars($adminInitials, ENT_QUOTES, 'UTF-8') ?></div><div><div class="admin-name"><?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8') ?></div><div class="admin-role">System Administrator</div></div></div>
  </div>
 </aside>
 
@@ -198,11 +285,15 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
  <div class="top-actions">
   <div class="search-wrap"><span>⌕</span><input class="search" id="globalSearch" type="search" placeholder="Search companies..." aria-label="Search companies"></div>
   <button class="icon-btn" id="notificationBtn" aria-label="Notifications">♧<i class="notification-dot"></i></button>
-  <div class="profile-chip"><div class="avatar">AD</div><div><strong>Admin User</strong><small>Administrator</small></div></div>
+  <div class="profile-chip"><div class="avatar"><?= htmlspecialchars($adminInitials, ENT_QUOTES, 'UTF-8') ?></div><div><strong><?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8') ?></strong><small>Administrator</small></div></div>
  </div>
 </header>
 
-<section class="welcome-strip"><div><h2>Good day, Admin 👋</h2><p>Review employer accounts, keep applicant data secure, and monitor platform activity.</p></div><div class="date-pill" id="todayDate">📅 October 09, 2026</div></section>
+<section class="welcome-strip"><div><h2>Good day, <?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8') ?> 👋</h2><p>Review employer accounts, keep applicant data secure, and monitor platform activity.</p></div><div class="date-pill" id="todayDate">📅</div></section>
+
+<?php if ($reviewMessage !== null): ?>
+ <p role="status" style="margin:0 0 18px;padding:12px 16px;border-radius:10px;background:var(--sage)"><?= htmlspecialchars($reviewMessage, ENT_QUOTES, 'UTF-8') ?></p>
+<?php endif; ?>
 
 <section class="stats" aria-label="Platform statistics">
 <?php foreach($stats as $s): ?>
@@ -213,16 +304,8 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
 <section class="content-grid">
  <article class="panel">
   <div class="panel-head"><div><h2 class="panel-title">Platform Activity</h2><p class="panel-desc">Applicant registrations over the last 6 months</p></div><a class="text-link" href="#activity">View activity ↗</a></div>
-  <div class="chart-summary"><div><strong>1,284</strong><span>Total applicants</span></div><div><strong>+18.6%</strong><span>Compared with previous period</span></div></div>
-  <svg class="chart" viewBox="0 0 620 205" role="img" aria-label="Line chart showing applicant registrations increasing from May to October">
-   <defs><linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#bcc590" stop-opacity=".5"/><stop offset="100%" stop-color="#bcc590" stop-opacity=".03"/></linearGradient></defs>
-   <line class="chart-grid" x1="40" y1="25" x2="605" y2="25"/><line class="chart-grid" x1="40" y1="65" x2="605" y2="65"/><line class="chart-grid" x1="40" y1="105" x2="605" y2="105"/><line class="chart-grid" x1="40" y1="145" x2="605" y2="145"/><line class="chart-grid" x1="40" y1="175" x2="605" y2="175"/>
-   <text class="chart-label" x="7" y="29">300</text><text class="chart-label" x="7" y="69">225</text><text class="chart-label" x="7" y="109">150</text><text class="chart-label" x="13" y="149">75</text><text class="chart-label" x="20" y="179">0</text>
-   <path fill="url(#areaFill)" d="M45 150 L150 125 L255 135 L360 90 L465 72 L570 35 L570 175 L45 175 Z"/>
-   <path class="chart-line" d="M45 150 L150 125 L255 135 L360 90 L465 72 L570 35"/>
-   <circle class="chart-dot" cx="45" cy="150" r="5"/><circle class="chart-dot" cx="150" cy="125" r="5"/><circle class="chart-dot" cx="255" cy="135" r="5"/><circle class="chart-dot" cx="360" cy="90" r="5"/><circle class="chart-dot" cx="465" cy="72" r="5"/><circle class="chart-dot" cx="570" cy="35" r="5"/>
-   <text class="chart-label" x="35" y="197">May</text><text class="chart-label" x="136" y="197">Jun</text><text class="chart-label" x="241" y="197">Jul</text><text class="chart-label" x="345" y="197">Aug</text><text class="chart-label" x="450" y="197">Sep</text><text class="chart-label" x="555" y="197">Oct</text>
-  </svg>
+  <div class="chart-summary"><div><strong><?= number_format($applicantCount) ?></strong><span>Applicant profiles</span></div><div><strong><?= number_format($pendingCount) ?></strong><span>Employer reviews pending</span></div></div>
+  <div class="note">These totals are read from the live database. Review individual employer contact details in the verification table below.</div>
  </article>
 
  <article class="panel" id="fields">
@@ -240,17 +323,26 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
  <div class="panel-head"><div><h2 class="panel-title">Employer Verification</h2><p class="panel-desc">Review company accounts before granting resume access.</p></div>
   <div class="table-tools"><select class="filter-select" id="statusFilter" aria-label="Filter by status"><option value="All">All statuses</option><option value="Pending">Pending</option><option value="Verified">Verified</option><option value="Rejected">Rejected</option></select><a class="text-link" href="#employers">View all ↗</a></div></div>
  <div class="table-scroll">
-  <table id="employerTable"><thead><tr><th>Company</th><th>Date submitted</th><th>Status</th><th>Action</th></tr></thead><tbody>
+  <table id="employerTable"><thead><tr><th>Company</th><th>Contact</th><th>Date submitted</th><th>Status</th><th>Review decision</th></tr></thead><tbody>
   <?php foreach($employers as $e): ?>
-   <tr data-status="<?= htmlspecialchars($e['status']) ?>" data-company="<?= htmlspecialchars(strtolower($e['company'].' '.$e['email'])) ?>">
-    <td><div class="company-cell"><div class="company-logo <?= htmlspecialchars($e['color']) ?>"><?= htmlspecialchars($e['initials']) ?></div><div><strong><?= htmlspecialchars($e['company']) ?></strong><small><?= htmlspecialchars($e['email']) ?></small></div></div></td>
+   <tr data-status="<?= htmlspecialchars($e['status'], ENT_QUOTES, 'UTF-8') ?>" data-company="<?= htmlspecialchars(strtolower($e['company'].' '.$e['email'].' '.$e['contact']), ENT_QUOTES, 'UTF-8') ?>">
+    <td><div class="company-cell"><div class="company-logo <?= htmlspecialchars($e['color'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($e['initials'], ENT_QUOTES, 'UTF-8') ?></div><div><strong><?= htmlspecialchars($e['company'], ENT_QUOTES, 'UTF-8') ?></strong><small><?= htmlspecialchars($e['email'], ENT_QUOTES, 'UTF-8') ?></small></div></div></td>
+    <td><?= htmlspecialchars($e['contact'] !== '' ? $e['contact'] : '—', ENT_QUOTES, 'UTF-8') ?></td>
     <td><?= htmlspecialchars($e['date']) ?></td>
-    <td><span class="status <?= strtolower($e['status']) ?>"><?= htmlspecialchars($e['status']) ?></span></td>
-    <td><?php if($e['status']==='Pending'): ?><button class="action-btn review-btn" data-company-name="<?= htmlspecialchars($e['company']) ?>">Review</button><?php else: ?><button class="action-btn details-btn" data-company-name="<?= htmlspecialchars($e['company']) ?>">Details</button><?php endif; ?></td>
+    <td><span class="status <?= htmlspecialchars(strtolower($e['status']), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($e['status'], ENT_QUOTES, 'UTF-8') ?></span><?php if ($e['notes'] !== ''): ?><small class="review-note">Note: <?= htmlspecialchars($e['notes'], ENT_QUOTES, 'UTF-8') ?></small><?php endif; ?></td>
+    <td>
+     <form method="post" action="/Dashboards/Admin.php#employers" class="review-form" onsubmit="return confirm('Save this verification decision for <?= htmlspecialchars(addslashes($e['company']), ENT_QUOTES, 'UTF-8') ?>?');">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+      <input type="hidden" name="employer_id" value="<?= (int) $e['id'] ?>">
+      <textarea name="review_notes" maxlength="1000" placeholder="Optional review note"><?= htmlspecialchars($e['notes'], ENT_QUOTES, 'UTF-8') ?></textarea>
+      <div><button class="action-btn review-btn" type="submit" name="decision" value="approve">Approve</button>
+      <button class="action-btn" type="submit" name="decision" value="reject">Reject</button></div>
+     </form>
+    </td>
    </tr>
   <?php endforeach; ?>
   </tbody></table>
-  <div class="empty-state" id="emptyState">No employer accounts match your search.</div>
+  <div class="empty-state" id="emptyState"<?= $employers ? '' : ' style="display:block"' ?>>No employer accounts match your search.</div>
  </div>
 </section>
 
@@ -274,7 +366,7 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--light-cre
   <div class="note"><strong>Privacy reminder:</strong> Resume access should be limited to verified employers. Log resume views and downloads, use short-lived signed links, and apply retention limits.</div>
  </article>
 </section>
-<footer class="footer">© 2026 4Hire · Admin Workspace · Sample dashboard data for frontend demonstration</footer>
+<footer class="footer">© 2026 4Hire · Employer verification decisions are saved to the database.</footer>
 </main></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -289,23 +381,9 @@ function filterEmployers(){
  const q=document.getElementById('globalSearch').value.trim().toLowerCase(),s=document.getElementById('statusFilter').value;let v=0;
  document.querySelectorAll('#employerTable tbody tr').forEach(r=>{const show=r.dataset.company.includes(q)&&(s==='All'||r.dataset.status===s);r.style.display=show?'':'none';if(show)v++});
  document.getElementById('emptyState').style.display=v?'none':'block'}
-document.getElementById('employerTable').addEventListener('click',e=>{
- const b=e.target.closest('button');if(!b)return;
- const company=b.dataset.companyName;
- if(b.classList.contains('review-btn')){
-  const choice=prompt('Review '+company+'\nType VERIFIED to approve or REJECTED to reject.\n\nDemo only — this does not save to a database.');
-  if(!choice)return;const n=choice.trim().toLowerCase();
-  if(!['verified','rejected'].includes(n)){showToast('Please enter VERIFIED or REJECTED.');return}
-  const row=b.closest('tr'),next=n==='verified'?'Verified':'Rejected';row.dataset.status=next;
-  const c=row.querySelector('.status');c.className='status '+n;c.textContent=next;
-  b.textContent='Details';b.classList.replace('review-btn','details-btn');
-  filterEmployers();showToast(company+' marked '+next+' (demo only).');
- }else showToast('Viewing '+company+' — connect to the employer details page.');
-});
 document.addEventListener('click',e=>{if(!sidebar.contains(e.target)&&!e.target.closest('#menuToggle'))sidebar.classList.remove('open')});
 document.querySelectorAll('.quick-action').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.action+' — connect this action to your backend.')));
-document.getElementById('notificationBtn').addEventListener('click',()=>showToast('You have 12 pending employer verification requests.'));
-document.getElementById('logout').addEventListener('click',e=>{e.preventDefault();showToast('Demo logout — connect this to your Laravel logout route.')});
+document.getElementById('notificationBtn').addEventListener('click',()=>showToast('You have <?= (int) $pendingCount ?> pending employer verification requests.'));
 document.getElementById('todayDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
 </script>
 </body>
