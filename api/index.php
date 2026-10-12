@@ -1,4 +1,5 @@
-    <?php
+<?php
+    ob_start();
     session_start();
 
     // Redirect unauthenticated users back to login
