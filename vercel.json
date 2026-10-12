@@ -1,23 +1,13 @@
 {
-  "version": 2,
   "functions": {
-    "api/index.php": {
-      "runtime": "vercel-php@0.6.1"
-    },
-    "api/db-test.php": {
-      "runtime": "vercel-php@0.6.1"
-    },
-    "api/applicants.php": {
-      "runtime": "vercel-php@0.6.1"
-    },
-    "api/testFile.php": {
-      "runtime": "vercel-php@0.6.1"
+    "api/*.php": {
+      "runtime": "vercel-php@0.9.0"
     }
   },
   "routes": [
     {
       "src": "/(.*)",
-      "destination": "/api/index.php"
+      "dest": "/api/index.php"
     }
   ]
 }
