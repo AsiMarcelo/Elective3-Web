@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../includes/config/database.php';
-require_once __DIR__ . '/../includes/config/database.php';
-require_once __DIR__ . '/../includes/config/storage.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/storage.php';
 
 startAppSession();
 

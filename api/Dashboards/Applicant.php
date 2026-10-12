@@ -67,7 +67,7 @@ $csrf = csrfToken();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>4Hire | My Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="/../../dashboard.css">
 </head>
 <body>
 <aside class="sidebar">
