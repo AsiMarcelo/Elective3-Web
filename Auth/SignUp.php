@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? '';
     $fullName = trim($_POST['full_name'] ?? '');
-    $contactNumber = trim($_POST['contact_number'] ?? '');
 
     if (!validCsrfToken($_POST['csrf_token'] ?? null)) {
         $errors[] = 'Your form session expired. Refresh the page and try again.';
@@ -27,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nameLength = preg_match_all('/./us', $fullName);
     if ($fullName === '' || $nameLength === false || $nameLength > 200) {
         $errors[] = 'Please enter a name of 1 to 200 characters.';
-    }
-    if (strlen($contactNumber) > 50) {
-        $errors[] = 'Contact number must be 50 characters or fewer.';
     }
     if (strlen($password) < 8 || strlen($password) > 72) {
         $errors[] = 'Password must be between 8 and 72 bytes.';
@@ -58,22 +54,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($role === 'applicant') {
                 $profile = $pdo->prepare(
-                    'INSERT INTO public.applicants (user_id, contact_number)
-                     VALUES (:user_id, :contact_number)'
+                    'INSERT INTO public.applicants (user_id)
+                     VALUES (:user_id)'
                 );
                 $profile->execute([
                     'user_id' => $userId,
-                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
                 ]);
             } else {
                 $profile = $pdo->prepare(
-                    'INSERT INTO public.employers (user_id, company_name, contact_number)
-                     VALUES (:user_id, :company_name, :contact_number)'
+                    'INSERT INTO public.employers (user_id, company_name)
+                     VALUES (:user_id, :company_name)'
                 );
                 $profile->execute([
                     'user_id' => $userId,
                     'company_name' => $fullName,
-                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
                 ]);
             }
 
@@ -140,10 +134,6 @@ $csrf = csrfToken();
         <div>
             <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
             <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="contact_number">Contact Number (optional):</label><br>
-            <input type="tel" id="contact_number" name="contact_number" maxlength="50" autocomplete="tel" value="<?= htmlspecialchars($_POST['contact_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
         </div><br>
         <div>
             <label class="roboto-mono-roboFont" for="password">Password:</label><br>
