@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/bootstrap.php';
-$envFile = __DIR__ . '/../envi.env';
+$envFile = __DIR__ . '/../../envi.env';
 
 if (file_exists($envFile)) {
     $env = parse_ini_file($envFile);
