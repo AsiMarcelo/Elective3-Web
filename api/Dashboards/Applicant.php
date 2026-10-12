@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/config/database.php';
+require_once __DIR__ . '/../includes/config/database.php';
 startAppSession();
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'applicant') {
