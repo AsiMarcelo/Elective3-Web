@@ -4,7 +4,7 @@
 
     // Redirect unauthenticated users back to login
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
-        header('Location: Auth/login.php');
+        header('Location: /Auth/login.php');
         exit();
     }
     //Route based on account type
