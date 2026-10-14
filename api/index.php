@@ -2,6 +2,11 @@
     ob_start();
     require_once __DIR__ . '/../includes/config/auth.php';
     startAppSession();
+    
+    if (!isset($_SESSION['user_id'])) {
+    echo "Debug: Session is empty or user_id is missing. Session ID: " . session_id();
+    exit();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
         header('Location: /Auth/login.php');
