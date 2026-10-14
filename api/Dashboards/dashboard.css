@@ -1,8 +1,52 @@
+/* =====================================================================
+   dashboard.css  -  shared styles for all 4Hire dashboards
+   (Admin.php, Employer.php, Applicant.php)
+
+   Link it from any dashboard <head>:
+       <link rel="stylesheet" href="dashboard.css">
+
+   Keep this file in the Dashboards/ folder, next to the dashboard pages.
+
+   SECTIONS
+   Shared by every dashboard:
+     1. Design tokens, reset and base
+     2. Sidebar
+     3. Page shell (main area, header)
+     4. Stats cards
+     5. Cards and charts
+     6. Toast
+     7. Responsive rules
+   Employer components (other dashboards can reuse or ignore them):
+     - Verification banner       (section 3)
+     - Recent applicants table   (section 5b)
+     - Quick actions             (section 5c)
+   Applicant components (other dashboards can reuse or ignore them):
+     - Completeness banner, resume card, job-field chips,
+       view history and privacy switches   (section 5d)
+   Admin components (Admin.php):
+     - Sections 5e and 8. Add class="admin-page" to the Admin <body>.
+       It scopes every rule that differs from the shared look (sidebar
+       drawer, spacing, quick actions, ...) so the other dashboards
+       are not affected.
+
+   Dynamic values from PHP are passed through one custom property,
+   e.g. <div class="bar" style="--value:42%">, so all real styling
+   lives in this file and the page only supplies the number.
+   (Bars, progress fills and the completeness meter all work this way.)
+
+   The original rule order is kept on purpose so the cascade behaves
+   exactly as it did when these styles lived inside Employer.php.
+   ===================================================================== */
+
+
+/* ---------------------------------------------------------------------
+   1. Design tokens, reset and base
+   --------------------------------------------------------------------- */
 :root{
-  --soft-olive:#bcc590;      
-  --light-cream:#f6f4d2b9;   
-  --sage:#CBDFBD;            
-  --terracotta:#F19C79;      
+  --soft-olive:#bcc590;      /* Active badges, highlights, buttons */
+  --light-cream:#f6f4d2b9;   /* Main background */
+  --sage:#CBDFBD;            /* Sidebar/Card borders & soft bg accents */
+  --terracotta:#F19C79;      /* Primary CTA, notifications, logo accent */
   --dark-text:#2D3A2F;
   --muted-text:#5A695C;
   --white:#FFFFFF;
