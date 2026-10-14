@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/config/auth.php';
 
 startAppSession();
 
-if (isset($_SESSION['user_id'])) {
+if (isset($_COOKIE['user_id'])) {
     header('Location: /index.php');
     exit();
 }
@@ -73,10 +73,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $userId;
-            $_SESSION['user_role'] = $role;
-            $_SESSION['user_name'] = $fullName;
+            // Set secure cookies for Vercel serverless session persistence
+            $cookieOptions = [
+                'expires' => time() + 86400, // 1 day
+                'path' => '/',
+                'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ];
+
+            setcookie('user_id', (string) $userId, $cookieOptions);
+            setcookie('user_role', $role, $cookieOptions);
+            setcookie('user_name', $fullName, $cookieOptions);
+            
             unset($_SESSION['csrf_token']);
 
             header('Location: /index.php');
@@ -112,11 +121,9 @@ $csrf = csrfToken();
     <link rel="stylesheet" href="/css/styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create an Account</title>
+    <title>4Hire - Create an Account</title>
 </head>
-<body>
-    <h2 class="logForm">Sign Up</h2>
-
+<body style="background-color:black">
     <?php if ($errors): ?>
         <ul role="alert" style="color:red">
             <?php foreach ($errors as $error): ?>
@@ -125,30 +132,39 @@ $csrf = csrfToken();
         </ul>
     <?php endif; ?>
 
-    <form method="POST" action="SignUp.php">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <div>
-            <label class="roboto-mono-roboFont" for="full_name">Full Name / Company Name:</label><br>
-            <input type="text" id="full_name" name="full_name" maxlength="200" required value="<?= htmlspecialchars($_POST['full_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
-            <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="password">Password:</label><br>
-            <input type="password" id="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont">I am signing up as:</label><br>
-            <input type="radio" id="applicant" name="role" value="applicant" checked>
-            <label class="roboto-mono-roboFont" for="applicant">Job Applicant</label><br>
-            <input type="radio" id="employer" name="role" value="employer">
-            <label class="roboto-mono-roboFont" for="employer">Employer / Recruiter</label>
-        </div><br>
-        <button type="submit">Create Account</button>
-    </form>
+    <h2 id="logForm" class="roboto-mono-roboFont">Sign Up</h2>
+    
+    <card class="loginCard">
+        <form class="logForm" method="POST" action="SignUp.php">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+            
+            <div>
+                <label class="roboto-mono-roboFont" for="full_name">Full Name / Company Name:</label><br>
+                <input type="text" id="full_name" name="full_name" maxlength="200" required value="<?= htmlspecialchars($_POST['full_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div><br>
 
-    <p class="roboto-mono-roboFont">Already have an account? <a href="/Auth/login.php">Log in here</a>.</p>
+            <div>
+                <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
+                <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div><br>
+
+            <div>
+                <label class="roboto-mono-roboFont" for="password">Password:</label><br>
+                <input type="password" id="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
+            </div><br>
+
+            <div>
+                <label class="roboto-mono-roboFont">I am signing up as:</label><br>
+                <input type="radio" id="applicant" name="role" value="applicant" checked>
+                <label class="roboto-mono-roboFont" for="applicant">Job Applicant</label><br>
+                <input type="radio" id="employer" name="role" value="employer">
+                <label class="roboto-mono-roboFont" for="employer">Employer / Recruiter</label>
+            </div><br>
+
+            <button type="submit">Create Account</button>
+            
+            <p class="roboto-mono-roboFont">Already have an account? <a href="/Auth/login.php">Log in here</a>.</p>
+        </form>
+    </card>
 </body>
 </html>

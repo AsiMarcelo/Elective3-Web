@@ -1,10 +1,9 @@
 <?php
-session_start();
+require_once __DIR__ . '/../../includes/config/auth.php';
+startAppSession();
 
-// 1. Clear all session data
 $_SESSION = [];
 
-// 2. Delete the session cookie in the browser
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
     setcookie(
@@ -18,8 +17,13 @@ if (ini_get('session.use_cookies')) {
     );
 }
 
-// 3. Destroy the session on the server
+
 session_destroy();
+
+// 4. Clear the application authentication cookies
+setcookie('user_id', '', time() - 3600, '/');
+setcookie('user_role', '', time() - 3600, '/');
+setcookie('user_name', '', time() - 3600, '/');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,16 +33,15 @@ session_destroy();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/../../styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <title>4Hire - Logged out</title>
 </head>
-<body>
-    <div class="rounded-rectangle">
-    <h2 class="roboto-mono-roboFont">Logged out</h2>
-    </div>
-
-    <p>You have been logged out successfully.</p>
-
-    <p><a href="/Auth/login.php">Log in again</a></p>
+<body style="background-color:black">
+    <h2 id="logForm" class="roboto-mono-roboFont">Logged out</h2>
+    
+    <card class="loginCard">
+        <p class="roboto-mono-roboFont" style="color: #f4f0f0; margin-bottom: 15px;">You have been logged out successfully.</p>
+        <p class="roboto-mono-roboFont"><a href="/Auth/login.php">Log in again</a></p>
+    </card>
 </body>
 </html>

@@ -1,16 +1,35 @@
 <?php
-session_start();
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/auth.php';
+startAppSession();
 
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'employer') {
+$user_id = $_COOKIE['user_id'] ?? null;
+$user_role = $_COOKIE['user_role'] ?? null;
+
+if (!$user_id || $user_role !== 'employer') {
     header('Location: /Auth/login.php');
     exit();
 }
 
-$companyName = "ABC Company";
-$employerName = "Employer Account";
-$verificationStatus = "Verified";
+$pdo = getDbConnection();
 
-$totalApplicants = 128; $totalResumes = 96; $shortlisted = 24; $activeJobs = 8;
+// Fetch live employer details from database
+try {
+    $stmt = $pdo->prepare('SELECT company_name, verification_status FROM public.employers WHERE user_id = :user_id LIMIT 1');
+    $stmt->execute(['user_id' => (int)$user_id]);
+    $employerRecord = $stmt->fetch();
+} catch (Throwable $e) {
+    $employerRecord = false;
+}
+
+$companyName = $employerRecord['company_name'] ?? ($_COOKIE['user_name'] ?? 'Employer Company');
+$employerName = $_COOKIE['user_name'] ?? 'Employer Account';
+$verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
+
+$totalApplicants = 128; 
+$totalResumes = 96; 
+$shortlisted = 24; 
+$activeJobs = 8;
 
 $fieldData = ["Software Development"=>42,"Web Development"=>28,"Networking"=>18,"Other / Unsure"=>12];
 $fieldTones = ['olive','terracotta','sage','cream'];
@@ -34,7 +53,7 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>4Hire | Employer Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="/../../dashboard.css">
+<link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
 
