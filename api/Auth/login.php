@@ -29,12 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user && password_verify($password, $user['password_hash'])
                 && in_array($user['role'], ['admin', 'applicant', 'employer'], true)) {
                 
-                $_SESSION['user_id'] = (int) $user['id'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['user_name'] = $user['full_name'];
-                unset($_SESSION['csrf_token']);
+                $cookieOptions = [
+                    'expires' => time() + 86400, // 1 day
+                    'path' => '/',
+                    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ];
 
-                session_write_close();  
+                setcookie('user_id', (string) $user['id'], $cookieOptions);
+                setcookie('user_role', $user['role'], $cookieOptions);
+                setcookie('user_name', $user['full_name'], $cookieOptions);
+    
+                unset($_SESSION['csrf_token']);
 
                 header('Location: /index.php');
                 exit();
