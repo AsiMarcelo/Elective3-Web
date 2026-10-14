@@ -28,11 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user && password_verify($password, $user['password_hash'])
                 && in_array($user['role'], ['admin', 'applicant', 'employer'], true)) {
-                session_regenerate_id(true);
+                
                 $_SESSION['user_id'] = (int) $user['id'];
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['user_name'] = $user['full_name'];
                 unset($_SESSION['csrf_token']);
+
+                session_write_close();  
 
                 header('Location: /index.php');
                 exit();

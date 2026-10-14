@@ -1,8 +1,8 @@
 <?php
     ob_start();
-    session_start();
+    require_once __DIR__ . '/../includes/config/auth.php';
+    startAppSession();
 
-    // Redirect unauthenticated users back to login
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
         header('Location: /Auth/login.php');
         exit();
