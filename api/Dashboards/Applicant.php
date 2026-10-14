@@ -1,14 +1,17 @@
 <?php
-require_once __DIR__ . '/../includes/config/database.php';
-require_once __DIR__ . '/../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/auth.php';
 startAppSession();
 
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'applicant') {
+$user_id = $_COOKIE['user_id'] ?? null;
+$user_role = $_COOKIE['user_role'] ?? null;
+
+if (!$user_id || $user_role !== 'applicant') {
     header('Location: /Auth/login.php');
     exit();
 }
 
-$applicantName = $_SESSION['user_name'] ?? 'Applicant';
+$applicantName = $_COOKIE['user_name'] ?? 'Applicant';
 $resume = null;
 try {
     $pdo = getDbConnection();
@@ -19,7 +22,7 @@ try {
          JOIN public.users u ON u.id = a.user_id
          WHERE a.user_id = :user_id'
     );
-    $profile->execute(['user_id' => (int) $_SESSION['user_id']]);
+    $profile->execute(['user_id' => (int) $user_id]);
     $applicant = $profile->fetch();
     if ($applicant) {
         $applicantName = $applicant['full_name'] ?: $applicantName;
@@ -67,7 +70,7 @@ $csrf = csrfToken();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>4Hire | My Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="/../../dashboard.css">
+<link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
 <aside class="sidebar">

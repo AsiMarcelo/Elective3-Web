@@ -126,7 +126,6 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
     <div class="field"><div class="field-info"><span class="field-name"><?= h($field) ?></span><span class="field-percent"><?= (int)$pct ?>%</span></div><div class="progress"><div class="progress-fill <?= h($fieldTones[$i++ % 4]) ?>" style="--value:<?= (int)$pct ?>%"></div></div></div>
    <?php endforeach; ?>
    </div>
-   <div class="ai-note"><strong>System note:</strong> Most applicants in your pool specialize in Software and Web Development. Fields shown are the ones applicants confirmed themselves.</div>
   </section>
  </div>
 

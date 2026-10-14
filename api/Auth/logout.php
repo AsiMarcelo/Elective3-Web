@@ -41,7 +41,7 @@ setcookie('user_name', '', time() - 3600, '/');
     
     <card class="loginCard">
         <p class="roboto-mono-roboFont" style="color: #f4f0f0; margin-bottom: 15px;">You have been logged out successfully.</p>
-        <p class="roboto-mono-roboFont"><a href="/Auth/login.php">Log in again</a></p>
+        <p class="roboto-mono-roboFont"><a href="/Auth/login.php"><br>Log in again</a></p>
     </card>
 </body>
 </html>
