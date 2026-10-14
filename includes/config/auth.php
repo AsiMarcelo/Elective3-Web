@@ -7,6 +7,7 @@ function startAppSession(): void
     }
 
     ini_set('session.use_strict_mode', '1');
+    session_save_path('/tmp');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
