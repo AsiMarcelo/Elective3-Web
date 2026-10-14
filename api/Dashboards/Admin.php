@@ -3,7 +3,10 @@ require_once __DIR__ . '/../../includes/config/database.php';
 require_once __DIR__ . '/../../includes/config/auth.php';
 startAppSession();
 
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+$user_id = $_COOKIE['user_id'] ?? null;
+$user_role = $_COOKIE['user_role'] ?? null;
+
+if (!$user_id || $user_role !== 'admin') {
     header('Location: /Auth/login.php');
     exit();
 }
@@ -31,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             $update->execute([
                 'status' => $status,
-                'admin_id' => (int) $_SESSION['user_id'],
+                'admin_id' => (int) $user_id,
                 'notes' => $notes !== '' ? $notes : null,
                 'employer_id' => $employerId,
             ]);
@@ -81,7 +84,7 @@ foreach ($employerQuery->fetchAll() as $index => $employer) {
         'color' => $colors[$index % count($colors)],
     ];
 }
-$adminName = (string) ($_SESSION['user_name'] ?? 'Administrator');
+$adminName = (string) ($_COOKIE['user_name'] ?? 'Administrator');
 $adminInitials = strtoupper(substr($adminName, 0, 1));
 $csrf = csrfToken();
 $activityQuery = $pdo->query(
