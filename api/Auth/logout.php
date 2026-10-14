@@ -17,7 +17,6 @@ if (ini_get('session.use_cookies')) {
     );
 }
 
-
 session_destroy();
 
 // 4. Clear the application authentication cookies
@@ -38,10 +37,12 @@ setcookie('user_name', '', time() - 3600, '/');
 </head>
 <body style="background-color:black">
     <h2 id="logForm" class="roboto-mono-roboFont">Logged out</h2>
-    
+
     <card class="loginCard">
-        <p class="roboto-mono-roboFont" style="color: #f4f0f0; margin-bottom: 15px;">You have been logged out successfully.</p>
-        <p class="roboto-mono-roboFont"><a href="/Auth/login.php"><br>Log in again</a></p>
+        <div style="display: flex; flex-direction: column; width: 100%; align-items: center; text-align: center;">
+            <p class="roboto-mono-roboFont" style="color: #f4f0f0; margin-bottom: 15px;">You have been logged out successfully.</p>
+            <p class="roboto-mono-roboFont"><a href="/Auth/login.php">Log in again</a></p>
+        </div>
     </card>
 </body>
 </html>
