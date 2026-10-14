@@ -1,36 +1,27 @@
-/* =====================================================================
-   dashboard.css  -  shared styles for all 4Hire dashboards
-   (Admin.php, Employer.php, Applicant.php)
-   Theme: Black background, Maroon cards, Consolas font, High Contrast
-   ===================================================================== */
-
-/* ---------------------------------------------------------------------
-   1. Design tokens, reset and base
-   --------------------------------------------------------------------- */
 :root{
   --bg-black:#000000;
-  --card-maroon:#2c0b0f;     /* Deep maroon cards */
-  --card-hover:#3b1016;      /* Hover state for cards */
-  --border-maroon:#541a22;   /* Distinct maroon/wine borders */
+  --card-gradient:linear-gradient(135deg, #330c10 0%, #170406 100%);     /* Rich maroon gradient for cards */
+  --sidebar-gradient:linear-gradient(180deg, #451016 0%, #1c0305 100%);  /* Distinct maroon gradient for sidebar */
+  --card-hover:linear-gradient(135deg, #421015 0%, #220508 100%);       /* Hover state gradient for cards */
+  --border-maroon:#5f1c25;   /* Distinct maroon/wine borders */
   --accent-gold:#e2b714;     /* Active badges, highlights, accents */
   --accent-red:#d1495b;      /* Primary CTA, notifications, logo accent */
-  --text-light:#f4f0f0;      /* Primary contrasting text */
+  --text-light:#dedad6;      /* Warm dirty white contrasting text */
   --text-muted:#b8989c;      /* Secondary muted contrasting text */
   
-  /* Mapped legacy variables for seamless component compatibility */
-  --white:#2c0b0f;           /* Maps white elements to maroon cards */
+  --white:#2c0b0f;           
   --light-cream:#180507;     /* Darker maroon surface for inputs/inner boxes */
-  --sage:#541a22;            /* Borders & accents */
+  --sage:#5f1c25;            /* Borders & accents */
   --terracotta:#d1495b;      /* Primary action color */
   --soft-olive:#d4a373;      /* Secondary highlight */
-  --dark-text:#f4f0f0;       /* High contrast text */
+  --dark-text:#dedad6;       
   --muted-text:#b8989c;      
-  --border-color:#541a22;
+  --border-color:#5f1c25;
   --shadow:0 5px 25px rgba(0,0,0,.7);
   --sidebar-width:252px;
-  --olive-soft:color-mix(in srgb,var(--soft-olive) 35%,var(--card-maroon));
-  --terra-soft:color-mix(in srgb,var(--terracotta) 25%,var(--card-maroon));
-  --sage-soft:color-mix(in srgb,var(--sage) 45%,var(--card-maroon));
+  --olive-soft:color-mix(in srgb,var(--soft-olive) 35%,#2c0b0f);
+  --terra-soft:color-mix(in srgb,var(--terracotta) 25%,#2c0b0f);
+  --sage-soft:color-mix(in srgb,var(--sage) 45%,#2c0b0f);
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -47,9 +38,9 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 
 
 /* ---------------------------------------------------------------------
-   2. Sidebar
+   2. Sidebar (Distinct Maroon Gradient)
    --------------------------------------------------------------------- */
-.sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-width);background:var(--card-maroon);border-right:1px solid var(--border-maroon);display:flex;flex-direction:column;z-index:100}
+.sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-width);background:var(--sidebar-gradient);border-right:1px solid var(--border-maroon);display:flex;flex-direction:column;z-index:100}
 .logo-container{padding:24px 26px 20px;display:flex;align-items:center;gap:10px}
 .brand-mark{height:39px;width:39px;display:grid;place-items:center;background:var(--terracotta);color:var(--text-light);border-radius:10px;font-weight:900;font-size:19px;flex:0 0 39px}
 .logo{font-size:22px;font-weight:900;letter-spacing:-.8px;color:var(--text-light)}.logo span{color:var(--accent-gold)}
@@ -69,10 +60,10 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 
 
 /* ---------------------------------------------------------------------
-   3. Page shell: main area, header, verification banner
+   3. Page shell: main area, header, verification banner (Maroon Gradients)
    --------------------------------------------------------------------- */
 .main{margin-left:var(--sidebar-width);padding:28px 32px 40px;background:var(--bg-black)}
-.card,.top-header,.verification,.stat-card,.quick-action{background:var(--card-maroon);border:1px solid var(--border-maroon);box-shadow:var(--shadow);color:var(--text-light)}
+.card,.top-header,.verification,.stat-card,.quick-action{background:var(--card-gradient);border:1px solid var(--border-maroon);box-shadow:var(--shadow);color:var(--text-light)}
 .top-header{border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
 .page-title{font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1.15;color:var(--text-light)}
 .page-description{margin-top:8px;font-size:12px;color:var(--text-muted)}
@@ -243,8 +234,8 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 .search-wrap{position:relative}.search-wrap span{position:absolute;left:13px;top:10px;color:var(--text-muted)}
 .search{width:230px;padding:11px 13px 11px 36px;border:1px solid var(--border-maroon);background:var(--light-cream);border-radius:10px;outline:none;color:var(--text-light)}
 .search:focus{border-color:var(--soft-olive);box-shadow:0 0 0 3px color-mix(in srgb,var(--soft-olive) 40%,transparent)}
-.icon-btn{width:40px;height:40px;border:1px solid var(--border-maroon);background:var(--card-maroon);border-radius:10px;position:relative;color:var(--text-light)}
-.notification-dot{position:absolute;right:8px;top:7px;width:8px;height:8px;background:var(--terracotta);border:1px solid var(--card-maroon);border-radius:50%}
+.icon-btn{width:40px;height:40px;border:1px solid var(--border-maroon);background:var(--card-gradient);border-radius:10px;position:relative;color:var(--text-light)}
+.notification-dot{position:absolute;right:8px;top:7px;width:8px;height:8px;background:var(--terracotta);border:1px solid var(--border-maroon);border-radius:50%}
 .profile-chip{display:flex;align-items:center;gap:9px;padding-left:4px}
 .profile-chip .avatar{height:39px;width:39px;flex-basis:39px;border-radius:50%;background:var(--soft-olive);color:#000}
 .profile-chip strong{display:block;font-size:12px;color:var(--text-light)}.profile-chip small{display:block;color:var(--text-muted);font-size:11px;margin-top:3px}
@@ -253,7 +244,7 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 
 .welcome-strip{display:flex;align-items:center;justify-content:space-between;gap:18px;background:var(--border-maroon);border:1px solid var(--soft-olive);border-radius:12px;padding:18px 21px;margin-bottom:22px}
 .welcome-strip h2{font-size:15px;margin:0 0 5px;font-weight:800;color:var(--text-light)}.welcome-strip p{margin:0;color:var(--text-muted);font-size:12px}
-.date-pill{border:1px solid var(--soft-olive);background:var(--card-maroon);color:var(--text-light);padding:9px 12px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap}
+.date-pill{border:1px solid var(--soft-olive);background:var(--card-gradient);color:var(--text-light);padding:9px 12px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap}
 .review-message{margin:0 0 18px;padding:12px 16px;border-radius:10px;background:var(--border-maroon);color:var(--text-light)}
 
 
@@ -261,7 +252,7 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 .stat-more{color:var(--text-muted);font-size:18px}
 .stat-value{font-size:26px;letter-spacing:-1px;font-weight:800;margin-top:5px;color:var(--text-light)}
 .stat-foot{font-size:11px;color:var(--text-muted);margin-top:8px}.trend{color:var(--accent-gold);font-weight:800}
-.panel{background:var(--card-maroon);border:1px solid var(--border-maroon);border-radius:12px;box-shadow:var(--shadow);min-width:0;padding:21px;color:var(--text-light)}
+.panel{background:var(--card-gradient);border:1px solid var(--border-maroon);border-radius:12px;box-shadow:var(--shadow);min-width:0;padding:21px;color:var(--text-light)}
 .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:19px}
 .panel-title{font-size:15px;font-weight:800;letter-spacing:-.3px;margin:0;color:var(--text-light)}
 .panel-desc{color:var(--text-muted);font-size:12px;margin:6px 0 0}
@@ -310,7 +301,7 @@ button,input,select,textarea{font:inherit;color:var(--text-light)}button{cursor:
 .footer{padding:23px 0 0;text-align:center;color:var(--text-muted);font-size:10px}
 
 
-.toast{position:fixed;right:22px;bottom:22px;background:var(--card-maroon);color:var(--text-light);padding:13px 17px;border-radius:10px;border:1px solid var(--border-maroon);border-left:4px solid var(--accent-gold);box-shadow:var(--shadow);z-index:200;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
+.toast{position:fixed;right:22px;bottom:22px;background:var(--card-gradient);color:var(--text-light);padding:13px 17px;border-radius:10px;border:1px solid var(--border-maroon);border-left:4px solid var(--accent-gold);box-shadow:var(--shadow);z-index:200;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
 .toast.show{opacity:1;transform:none}
 
 
