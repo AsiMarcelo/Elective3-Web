@@ -68,7 +68,7 @@ $csrf = csrfToken();
     <?php endif; ?>
     <h2 id="logForm" class="roboto-mono-roboFont">Login</h2>
     <card class="loginCard">
-        <form class="logForm" method="POST" action="/api/Auth/login.php">
+        <form class="logForm" method="POST" action="/Auth/login.php">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
             <label class="roboto-mono-roboFont" for="email">Email:</label>
             <input id="email" type="email" name="email" placeholder="Enter your email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">

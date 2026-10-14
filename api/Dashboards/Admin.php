@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../includes/config/database.php';
-require_once __DIR__ . '/../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/auth.php';
 startAppSession();
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
@@ -114,7 +114,7 @@ $fields = [['Software Development',42,'olive'],['Web Development',28,'terracotta
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>4Hire | Admin Dashboard</title>
-<link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body class="admin-page"><div class="app">
 <aside class="sidebar" id="sidebar">
@@ -245,7 +245,7 @@ function filterEmployers(){
 document.addEventListener('click',e=>{if(!sidebar.contains(e.target)&&!e.target.closest('#menuToggle'))sidebar.classList.remove('open')});
 document.querySelectorAll('.quick-action').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.action+' — connect this action to your backend.')));
 document.getElementById('notificationBtn').addEventListener('click',()=>showToast('You have <?= (int) $pendingCount ?> pending employer verification requests.'));
-document.getElementById('todayDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+document.getElementById('todayDate').textContent='Date'+new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
 </script>
 </body>
 </html>

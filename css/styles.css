@@ -35,7 +35,7 @@ h2.logForm{
     display: flex;
     min-height: 100vh;
     align-items: center;
-    background-color: #5d5858;
+    background-color:rgba(93, 88, 88, 0.3);
     padding: 20px;
     border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
