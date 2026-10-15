@@ -40,7 +40,6 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{background:var(--bg-black);scroll-behavior:smooth}
 
-/* Inter Font Implementation with professional typography defaults */
 body{
   font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size:14px;
