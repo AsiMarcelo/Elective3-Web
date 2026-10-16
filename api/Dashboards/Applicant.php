@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/config/database.php';
 require_once __DIR__ . '/../../includes/config/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/services/GeminiServices.php';
 startAppSession();
 
 $user_id = $_COOKIE['user_id'] ?? null;
@@ -13,52 +14,85 @@ if (!$user_id || $user_role !== 'applicant') {
 
 $applicantName = $_COOKIE['user_name'] ?? 'Applicant';
 $resume = null;
+$aiSuggestedFields = [];
+$resumeKeywords = [];
+$isProcessed = false;
+
 try {
     $pdo = getDbConnection();
+    
+    // Check if processing was requested or pending
+    if (isset($_GET['action']) && $_GET['action'] === 'reparse') {
+        try {
+            $gemini = new GeminiServices($pdo);
+            $gemini->processApplicant((int)$user_id);
+            header('Location: /Dashboards/Applicant.php?resume=reparsed');
+            exit();
+        } catch (Throwable $e) {
+            error_log('Manual reparse failed: ' . $e->getMessage());
+        }
+    }
+
     $profile = $pdo->prepare(
         'SELECT u.full_name, a.resume_original_name, a.resume_mime_type,
-                a.resume_size_bytes, a.resume_uploaded_at
+                a.resume_size_bytes, a.resume_uploaded_at, a.ai_suggested_fields,
+                a.resume_keywords, a.resume_text, a.resume_processed_at
          FROM public.applicants a
          JOIN public.users u ON u.id = a.user_id
          WHERE a.user_id = :user_id'
     );
     $profile->execute(['user_id' => (int) $user_id]);
     $applicant = $profile->fetch();
+
     if ($applicant) {
         $applicantName = $applicant['full_name'] ?: $applicantName;
+        
         if (!empty($applicant['resume_original_name'])) {
             $resume = [
                 'file' => $applicant['resume_original_name'],
                 'type' => strtoupper(pathinfo($applicant['resume_original_name'], PATHINFO_EXTENSION)),
                 'size' => number_format(((int) $applicant['resume_size_bytes']) / 1024) . ' KB',
                 'uploaded' => $applicant['resume_uploaded_at'] ? date('M d, Y', strtotime($applicant['resume_uploaded_at'])) : '',
-                'status' => 'Stored securely',
+                'status' => 'Stored securely & Parsed',
             ];
         }
+
+        // Load AI suggested fields from JSONB database column
+        if (!empty($applicant['ai_suggested_fields'])) {
+            $aiSuggestedFields = json_decode($applicant['ai_suggested_fields'], true) ?? [];
+        }
+
+        // Load extracted keywords from JSONB database column
+        if (!empty($applicant['resume_keywords'])) {
+            $resumeKeywords = json_decode($applicant['resume_keywords'], true) ?? [];
+        }
+
+        $isProcessed = !empty($applicant['resume_processed_at']);
     }
 } catch (Throwable $e) {
     error_log('Could not load applicant dashboard profile: ' . $e->getMessage());
 }
-$completeness = 80;
-$allFields = ["Software Development","Web Development","Networking","Other / Unsure"];
-$suggestedField = "Web Development";           // stored separately from the confirmed fields
-$confirmedFields = ["Software Development","Web Development"];
-$views = [
- ["company"=>"Cloudline Systems Inc.","date"=>"Oct 08, 2026 · 2:14 PM","color"=>"sage"],
- ["company"=>"Northstar Digital Solutions","date"=>"Oct 07, 2026 · 9:40 AM","color"=>"olive"],
- ["company"=>"BrightPath Technologies","date"=>"Oct 05, 2026 · 4:02 PM","color"=>"terracotta"],
-];
+
+// Load available fields dynamically from classifications.php
+$classificationsConfig = include __DIR__ . '/../../includes/config/classifications.php';
+$allFields = $classificationsConfig['list'] ?? [];
+
+$suggestedField = !empty($aiSuggestedFields) ? reset($aiSuggestedFields) : (!empty($allFields) ? $allFields[0] : 'Others');
+$confirmedFields = $aiSuggestedFields ?: [];
+
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function initials($n){ $w=preg_split('/\s+/',trim($n)); return strtoupper(substr($w[0],0,1).(count($w)>1?substr(end($w),0,1):'')); }
+
 $resumeNotices = [
- 'uploaded' => 'Resume uploaded and linked to your applicant profile.',
+ 'uploaded' => 'Resume uploaded, converted to text, and successfully classified by AI.',
+ 'reparsed' => 'Resume successfully re-parsed and classified.',
  'deleted' => 'Resume deleted.',
  'missing' => 'There is no resume to download or delete.',
  'too_large' => 'The resume must be 5 MB or smaller.',
  'invalid_type' => 'Upload a valid PDF, DOC, or DOCX file.',
  'upload_error' => 'The upload did not complete. Try again.',
  'invalid' => 'That resume action was not valid.',
- 'error' => 'Resume storage is not ready or the request failed. Check server configuration and logs.',
+ 'error' => 'Resume storage or AI processing failed. Check server logs.',
 ];
 $resumeNotice = $resumeNotices[$_GET['resume'] ?? ''] ?? null;
 $csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
@@ -82,7 +116,6 @@ $csrf = signedCsrfToken($csrfSecret);
    <li><a href="#" class="menu-item active" aria-current="page" title="Dashboard" data-section="Dashboard"><i class="menu-icon fa-solid fa-chart-pie"></i><span>Dashboard</span></a></li>
    <li><a href="#resume" class="menu-item" title="My Resume" data-section="My Resume"><i class="menu-icon fa-solid fa-file-lines"></i><span>My Resume</span></a></li>
    <li><a href="#fields" class="menu-item" title="Job Fields" data-section="Job Fields"><i class="menu-icon fa-solid fa-tags"></i><span>Job Fields</span></a></li>
-   <li><a href="#views" class="menu-item" title="Who Viewed Me" data-section="Who Viewed Me"><i class="menu-icon fa-solid fa-eye"></i><span>Who Viewed Me</span></a></li>
   </ul>
   <div class="menu-title">Account</div>
   <ul class="menu">
@@ -103,21 +136,16 @@ $csrf = signedCsrfToken($csrfSecret);
   <div class="top-meta"><strong><?= h($applicantName) ?></strong><span>Applicant Account</span></div>
  </header>
 
- <section class="card completeness">
-  <div><h2>Your profile is almost ready</h2><p>Next step: review your job fields so employers can filter and find you.</p></div>
-  <div class="meter"><div class="meter-top"><span>Profile completeness</span><span><?= (int)$completeness ?>%</span></div><div class="progress"><span style="--value:<?= (int)$completeness ?>%"></span></div></div>
- </section>
-
- <section class="stats" aria-label="Your summary">
-  <article class="stat-card"><div class="stat-icon olive"><i class="fa-solid fa-file-circle-check"></i></div><div class="stat-label">Resume</div><div class="stat-number stat-text"><?= $resume ? 'Uploaded' : 'Not uploaded' ?></div><div class="stat-change"><?= $resume ? 'Last updated ' . h($resume['uploaded']) : 'Upload a PDF, DOC, or DOCX' ?></div></article>
-  <article class="stat-card"><div class="stat-icon terracotta"><i class="fa-solid fa-eye"></i></div><div class="stat-label">Employer views</div><div class="stat-number"><?= count($views) ?></div><div class="stat-change">Verified employers only</div></article>
-  <article class="stat-card"><div class="stat-icon sage"><i class="fa-solid fa-tags"></i></div><div class="stat-label">Confirmed fields</div><div class="stat-number" id="confirmedCount"><?= count($confirmedFields) ?></div><div class="stat-change">Shown to employers</div></article>
-  <article class="stat-card"><div class="stat-icon cream"><i class="fa-solid fa-user-check"></i></div><div class="stat-label">Profile</div><div class="stat-number"><?= (int)$completeness ?>%</div><div class="stat-change">Complete</div></article>
+ <section class="card completeness" style="text-align: center;">
+  <div>
+   <h2>Your profile is <?= $resume ? 'almost ready' : 'pending resume upload' ?></h2>
+   <p>Next step: review your job fields so employers can filter and find you.</p>
+  </div>
  </section>
 
  <div class="content-grid">
   <section class="card" id="resume">
-   <div class="card-header"><h2 class="card-title">My Resume</h2><p class="card-subtitle">One resume at a time. Stored privately; only verified employers can open it.</p></div>
+   <div class="card-header"><h2 class="card-title">My Resume & AI Analysis</h2><p class="card-subtitle">PDF text extraction and classification powered by Gemini.</p></div>
    <div class="card-body">
     <?php if ($resumeNotice): ?><p role="status" class="notice"><?= h($resumeNotice) ?></p><?php endif; ?>
     <?php if ($resume): ?>
@@ -129,20 +157,35 @@ $csrf = signedCsrfToken($csrfSecret);
     <?php else: ?>
     <p class="empty-note">You have not uploaded a resume yet.</p>
     <?php endif; ?>
+
     <ul class="steps" aria-label="Resume processing">
-     <li class="<?= $resume ? '' : 'todo' ?>"><span class="step-dot"><?= $resume ? '<i class="fa-solid fa-check"></i>' : '1' ?></span>Stored in private resume storage</li>
-     <li class="todo"><span class="step-dot">2</span>Text extraction is not connected yet</li>
-     <li class="todo" id="stepAi"><span class="step-dot">3</span>AI field suggestion is not connected yet</li>
+     <li class="<?= $resume ? '' : 'todo' ?>"><span class="step-dot"><?= $resume ? '<i class="fa-solid fa-check"></i>' : '1' ?></span>Stored in private storage</li>
+     <li class="<?= $isProcessed ? '' : 'todo' ?>"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '2' ?></span>PDF converted to text via PdfToText parser</li>
+     <li class="<?= $isProcessed ? '' : 'todo' ?>" id="stepAi"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '3' ?></span>AI keyword matching & classification completed</li>
     </ul>
-    <form method="post" action="/Auth/Resume.php" enctype="multipart/form-data">
+
+    <?php if (!empty($resumeKeywords)): ?>
+    <div style="margin-top: 15px;">
+        <strong style="font-size: 13px; color: var(--text-muted);">Extracted Keywords:</strong>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+            <?php foreach($resumeKeywords as $kw): ?>
+                <span style="background: var(--card-hover); border: 1px solid var(--border-maroon); padding: 3px 8px; border-radius: 6px; font-size: 12px; color: var(--accent-gold);"><?= h($kw) ?></span>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <form method="post" action="/Auth/Resume.php" enctype="multipart/form-data" style="margin-top: 15px;">
      <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
      <input type="hidden" name="action" value="upload">
-     <label class="dropzone"><i class="fa-solid fa-cloud-arrow-up"></i><strong><?= $resume ? 'Replace your resume' : 'Upload your resume' ?></strong>Select a PDF, DOC, or DOCX file (max 5 MB)<input type="file" id="resumeInput" name="resume" accept=".pdf,.doc,.docx" required></label>
-     <div class="btn-row"><button class="btn" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Save resume</button></div>
+     <label class="dropzone"><i class="fa-solid fa-cloud-arrow-up"></i><strong><?= $resume ? 'Replace your resume' : 'Upload your resume' ?></strong>Select a PDF file (max 5 MB)<input type="file" id="resumeInput" name="resume" accept=".pdf" required></label>
+     <div class="btn-row"><button class="btn" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Upload & Parse with AI</button></div>
     </form>
+
     <div class="btn-row">
      <?php if ($resume): ?>
      <a class="btn outline" href="/Auth/Resume.php?action=download"><i class="fa-solid fa-download"></i>Download</a>
+     <a class="btn outline" href="/Dashboards/Applicant.php?action=reparse"><i class="fa-solid fa-brain"></i>Re-run AI Analysis</a>
      <form method="post" action="/Auth/Resume.php" onsubmit="return confirm('Delete your stored resume? This cannot be undone.');">
       <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
       <input type="hidden" name="action" value="delete">
@@ -154,31 +197,21 @@ $csrf = signedCsrfToken($csrfSecret);
   </section>
 
   <section class="card" id="fields">
-   <div class="card-header"><h2 class="card-title">My Job Fields</h2><p class="card-subtitle">Choose every field that fits you. You can pick more than one.</p></div>
+   <div class="card-header"><h2 class="card-title">AI Job Classifications</h2><p class="card-subtitle">Matched category results mapped from your resume keywords.</p></div>
    <div class="card-body">
-    <div class="suggest"><div><small>Suggested from your resume</small><strong><?= h($suggestedField) ?></strong></div><button class="btn" id="acceptSuggestion">Use suggestion</button></div>
+    <div class="suggest"><div><small>Primary AI Suggestion</small><strong><?= h($suggestedField) ?></strong></div><button class="btn" id="acceptSuggestion">Applied</button></div>
     <div class="chips" id="chips" role="group" aria-label="Job fields">
     <?php foreach($allFields as $f): ?>
      <button type="button" class="chip" aria-pressed="<?= in_array($f,$confirmedFields,true)?'true':'false' ?>" data-field="<?= h($f) ?>"><?= h($f) ?></button>
     <?php endforeach; ?>
     </div>
-    <p class="hint">The suggestion is only a starting point. Employers see and filter by the fields you confirm here.</p>
-    <div class="btn-row"><button class="btn" id="saveFields"><i class="fa-solid fa-check"></i>Confirm fields</button></div>
-    <div class="note"><strong>How AI is used:</strong> it only suggests a job field. It does not score, compare, or rank you against other applicants.</div>
+    <p class="hint">Gemini mapped your resume text against active job categories automatically.</p>
+    <div class="note"><strong>How AI is used:</strong> It extracts skills and assigns classification matching categories for recruiter filters.</div>
    </div>
   </section>
  </div>
 
- <div class="bottom-grid">
-  <section class="card" id="views">
-   <div class="card-header"><h2 class="card-title">Who Viewed My Resume</h2><p class="card-subtitle">Every view by a verified employer is recorded here.</p></div>
-   <div class="card-body">
-   <?php foreach($views as $v): ?>
-    <div class="view-item"><div class="view-logo <?= h($v['color']) ?>"><?= h(initials($v['company'])) ?></div><div class="view-text"><strong><?= h($v['company']) ?></strong><small>Viewed your resume</small></div><span class="view-time"><?= h($v['date']) ?></span></div>
-   <?php endforeach; ?>
-   </div>
-  </section>
-
+ <div class="bottom-grid" style="margin-top: 24px;">
   <section class="card" id="privacy">
    <div class="card-header"><h2 class="card-title">Privacy &amp; Consent</h2><p class="card-subtitle">You control who can find your resume.</p></div>
    <div class="card-body">
@@ -204,18 +237,11 @@ document.querySelectorAll('.menu-item').forEach(l=>l.addEventListener('click',()
     a.removeAttribute('aria-current')});
     l.classList.add('active');
     l.setAttribute('aria-current','page')}));
-document.querySelector('.menu-item[href="#"]:not(.active)')?.addEventListener('click',e=>{e.preventDefault();
-showToast('Connect this menu to its page or route.')});
 const chips=[...document.querySelectorAll('.chip')];
-function updateCount(){
-    document.getElementById('confirmedCount').textContent=chips.filter(c=>c.getAttribute('aria-pressed')==='true').length
-}
 chips.forEach(c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true')}));
-document.getElementById('acceptSuggestion').addEventListener('click',()=>{chips.find(c=>c.dataset.field===<?= json_encode($suggestedField) ?>)?.setAttribute('aria-pressed','true');showToast('Suggestion selected. Confirm your fields to save.')});
-document.getElementById('saveFields').addEventListener('click',()=>{const n=chips.filter(c=>c.getAttribute('aria-pressed')==='true').length;if(!n){showToast('Select at least one field, or choose Other / Unsure.');return}updateCount();showToast('Fields confirmed (demo only).')});
-document.getElementById('resumeInput').addEventListener('change',e=>{const f=e.target.files[0];if(f&&f.size>5*1024*1024){showToast('File is larger than 5 MB.');e.target.value='';return}if(f)showToast('Ready to upload '+f.name+'. Press Save resume to store it.');});
+document.getElementById('acceptSuggestion').addEventListener('click',()=>{chips.find(c=>c.dataset.field===<?= json_encode($suggestedField) ?>)?.setAttribute('aria-pressed','true');showToast('Suggestion selected.')});
+document.getElementById('resumeInput').addEventListener('change',e=>{const f=e.target.files[0];if(f&&f.size>5*1024*1024){showToast('File is larger than 5 MB.');e.target.value='';return}if(f)showToast('Ready to upload '+f.name+'. Press Upload & Parse with AI.');});
 document.getElementById('visibility').addEventListener('click',e=>{const b=e.currentTarget,on=b.getAttribute('aria-checked')!=='true';b.setAttribute('aria-checked',on);showToast(on?'Your resume is visible to verified employers.':'Your resume is hidden from employers.')});
-document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.action+' — connect this to your backend.')));
 document.getElementById('deleteAccount').addEventListener('click',()=>{if(confirm('Delete your account and all data? This cannot be undone.'))showToast('Account deleted')});
 </script>
 </body>

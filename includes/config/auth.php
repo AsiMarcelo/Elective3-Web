@@ -6,8 +6,9 @@ function startAppSession(): void
         return;
     }
 
+    // ... (keep your existing session settings)
     ini_set('session.use_strict_mode', '1');
-    session_save_path('/tmp'); // Essential for Vercel serverless session persistence
+    session_save_path('/tmp'); 
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
@@ -33,6 +34,8 @@ function validCsrfToken(mixed $token): bool
         && isset($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
 }
+
+/* --- ADD THESE MISSING FUNCTIONS BELOW --- */
 
 function signedCsrfToken(string $secret): string
 {

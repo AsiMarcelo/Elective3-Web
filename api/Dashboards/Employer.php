@@ -13,7 +13,6 @@ if (!$user_id || $user_role !== 'employer') {
 
 $pdo = getDbConnection();
 
-
 try {
     $stmt = $pdo->prepare('SELECT company_name, verification_status FROM public.employers WHERE user_id = :user_id LIMIT 1');
     $stmt->execute(['user_id' => (int)$user_id]);
@@ -26,11 +25,9 @@ $companyName = $employerRecord['company_name'] ?? ($_COOKIE['user_name'] ?? 'Emp
 $employerName = $_COOKIE['user_name'] ?? 'Employer Account';
 $verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
 
-
 try {
     $totalApplicants = (int) $pdo->query('SELECT COUNT(*) FROM public.applicants')->fetchColumn();
     $totalResumes = (int) $pdo->query('SELECT COUNT(*) FROM public.applicants WHERE resume_path IS NOT NULL')->fetchColumn();
-    
     
     $shortlisted = 0;
     try {
@@ -52,41 +49,21 @@ try {
     $activeJobs = 0;
 }
 
-$applicants = [];
+// Fetch applicant profile data to display in the central card
+$applicantData = null;
 try {
-    $recentStmt = $pdo->query(
-        "SELECT u.full_name, a.ai_suggested_fields, a.resume_uploaded_at
+    $applicantStmt = $pdo->query(
+        "SELECT u.full_name, a.resume_original_name, a.resume_storage_path, a.ai_suggested_fields, a.resume_keywords, a.resume_uploaded_at
          FROM public.applicants a
          JOIN public.users u ON u.id = a.user_id
          WHERE a.resume_uploaded_at IS NOT NULL
          ORDER BY a.resume_uploaded_at DESC
-         LIMIT 4"
+         LIMIT 1"
     );
-    foreach ($recentStmt->fetchAll() as $row) {
-        $fieldsArray = json_decode($row['ai_suggested_fields'] ?? '[]', true);
-        $primaryField = !empty($fieldsArray) ? $fieldsArray[0] : 'General';
-        $applicants[] = [
-            "name" => $row['full_name'],
-            "field" => $primaryField,
-            "position" => "Candidate",
-            "date" => date('M d, Y', strtotime($row['resume_uploaded_at']))
-        ];
-    }
+    $applicantData = $applicantStmt->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
-
+    $applicantData = null;
 }
-
-
-if (empty($applicants)) {
-    $applicants = [
-        ["name" => "No applicants yet", "field" => "—", "position" => "—", "date" => "—"]
-    ];
-}
-
-
-$fieldTones = ['olive','terracotta','sage','cream'];
-$fieldData = ["Software Development" => 42, "Web Development" => 28, "Networking" => 18, "Other / Unsure" => 12];
-$months = ['May' => 40, 'Jun' => 55, 'Jul' => 70, 'Aug' => 60, 'Sep' => 85, 'Oct' => 100];
 
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupper(substr($w[0],0,1) . (count($w)>1 ? substr(end($w),0,1) : '')); }
@@ -154,45 +131,65 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
   <article class="stat-card"><div class="stat-icon cream"><i class="fa-solid fa-briefcase"></i></div><div class="stat-label">Active jobs</div><div class="stat-number"><?= (int)$activeJobs ?></div><div class="stat-change">Currently hiring</div></article>
  </section>
 
- <div class="content-grid">
-  <section class="card chart-card">
-   <div class="card-header"><h2 class="card-title">Applicant Activity</h2><p class="card-subtitle">Monthly resume submissions overview</p></div>
-   <div class="chart" role="img" aria-label="Bar chart of monthly resume submissions">
-   <?php foreach($months as $m=>$pct): ?>
-    <div class="chart-column"><div class="bar-wrapper"><div class="bar" style="--value:<?= (int)$pct ?>%"></div></div><span class="month"><?= h($m) ?></span></div>
-   <?php endforeach; ?>
-   </div>
-  </section>
+ <!-- Central Card replacing empty space, referencing dashboards.css design tokens and layout -->
+ <section class="card" style="margin-bottom: 20px;">
+  <div class="card-header">
+   <h2 class="card-title">Candidate Profile Overview</h2>
+   <p class="card-subtitle">Latest applicant submission details and AI classification</p>
+  </div>
+  <div class="card-body">
+   <?php if ($applicantData): ?>
+    <?php 
+        $fieldsArr = json_decode($applicantData['ai_suggested_fields'] ?? '[]', true) ?: [];
+        $keywordsArr = json_decode($applicantData['resume_keywords'] ?? '[]', true) ?: [];
+    ?>
+    <div class="file-row" style="margin-bottom: 16px;">
+     <div class="file-icon"><i class="fa-solid fa-user"></i></div>
+     <div class="file-info">
+      <strong><?= h($applicantData['full_name']) ?></strong>
+      <small>Uploaded on <?= h(date('M d, Y', strtotime($applicantData['resume_uploaded_at']))) ?></small>
+     </div>
+     <span class="status">Verified Candidate</span>
+    </div>
 
-  <section class="card">
-   <div class="card-header"><h2 class="card-title">Top Fields</h2><p class="card-subtitle">Distribution by expertise</p></div>
-   <div class="fields">
-   <?php $i=0; foreach($fieldData as $field=>$pct): ?>
-    <div class="field"><div class="field-info"><span class="field-name"><?= h($field) ?></span><span class="field-percent"><?= (int)$pct ?>%</span></div><div class="progress"><div class="progress-fill <?= h($fieldTones[$i++ % 4]) ?>" style="--value:<?= (int)$pct ?>%"></div></div></div>
-   <?php endforeach; ?>
-   </div>
-  </section>
- </div>
+    <div style="margin-bottom: 16px;">
+     <strong style="font-size: 13px; color: var(--text-muted);">Classifications / Job Fields:</strong>
+     <div class="chips" style="margin-top: 6px;">
+      <?php if (!empty($fieldsArr)): ?>
+       <?php foreach($fieldsArr as $field): ?>
+        <span class="chip" aria-pressed="true"><?= h($field) ?></span>
+       <?php endforeach; ?>
+      <?php else: ?>
+       <span class="hint">No classifications assigned yet.</span>
+      <?php endif; ?>
+     </div>
+    </div>
 
- <section class="card recent-card">
-  <div class="recent-header"><div><h2 class="card-title">Recent Applicants</h2><p class="card-subtitle">Latest resume submissions</p></div><a href="#" class="view-all">View all</a></div>
-  <div class="table-header"><span>Applicant</span><span>Field</span><span>Position</span><span>Date</span><span>Action</span></div>
-  <?php foreach($applicants as $a): ?>
-   <div class="applicant-row">
-    <div class="applicant-name"><div class="mini-avatar"><?= h(initials($a['name'])) ?></div><span><?= h($a['name']) ?></span></div>
-    <div class="applicant-field"><?= h($a['field']) ?></div>
-    <div class="position"><?= h($a['position']) ?></div>
-    <div class="date"><?= h($a['date']) ?></div>
-    <div><button class="action-btn" data-name="<?= h($a['name']) ?>">View profile</button></div>
-   </div>
-  <?php endforeach; ?>
+    <div style="margin-bottom: 16px;">
+     <strong style="font-size: 13px; color: var(--text-muted);">Extracted Keywords:</strong>
+     <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+      <?php if (!empty($keywordsArr)): ?>
+       <?php foreach($keywordsArr as $kw): ?>
+        <span style="background: var(--card-hover); border: 1px solid var(--border-maroon); padding: 3px 8px; border-radius: 6px; font-size: 12px; color: var(--accent-gold);"><?= h($kw) ?></span>
+       <?php endforeach; ?>
+      <?php else: ?>
+       <span class="hint">No keywords extracted.</span>
+      <?php endif; ?>
+     </div>
+    </div>
+
+    <?php if (!empty($applicantData['resume_original_name'])): ?>
+    <div class="btn-row">
+     <a class="btn outline" href="/Auth/Resume.php?action=download" target="_blank"><i class="fa-solid fa-download"></i>Download Resume</a>
+    </div>
+    <?php endif; ?>
+
+   <?php else: ?>
+    <p class="empty-note">No applicant profiles or resumes are currently available in the system.</p>
+   <?php endif; ?>
+  </div>
  </section>
 
- <div class="quick-actions">
-  <button class="quick-action" data-action="Post new job"><span class="quick-icon terracotta"><i class="fa-solid fa-plus"></i></span><span><strong>Post New Job</strong><small>Create a new job listing</small></span></button>
-  <button class="quick-action" data-action="Search resumes"><span class="quick-icon olive"><i class="fa-solid fa-magnifying-glass"></i></span><span><strong>Search Resumes</strong><small>Filter candidate profiles</small></span></button>
-  <button class="quick-action" data-action="Manage jobs"><span class="quick-icon sage"><i class="fa-solid fa-sliders"></i></span><span><strong>Manage Jobs</strong><small>Edit existing listings</small></span></button>
- </div>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -200,9 +197,6 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
 const toast=document.getElementById('toast');let t;
 function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(t);t=setTimeout(()=>toast.classList.remove('show'),2800)}
 document.querySelectorAll('.menu-item').forEach(l=>l.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.menu-item').forEach(a=>{a.classList.remove('active');a.removeAttribute('aria-current')});l.classList.add('active');l.setAttribute('aria-current','page');if(l.dataset.section!=='Dashboard')showToast(l.dataset.section+' selected — connect this menu to its page or route.')}));
-document.querySelectorAll('.action-btn').forEach(b=>b.addEventListener('click',()=>showToast('Viewing '+b.dataset.name+' — connect to the applicant profile page.')));
-document.querySelectorAll('.quick-action').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.action+' — connect this action to your backend.')));
-document.querySelector('.view-all').addEventListener('click',e=>{e.preventDefault();showToast('Connect to the full applicants list.')});
 </script>
 </body>
 </html>

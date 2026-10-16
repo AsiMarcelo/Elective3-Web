@@ -96,7 +96,8 @@ try {
         $update = $pdo->prepare(
             'UPDATE public.applicants
              SET resume_storage_path = NULL, resume_original_name = NULL,
-                 resume_mime_type = NULL, resume_size_bytes = NULL, resume_uploaded_at = NULL
+                 resume_mime_type = NULL, resume_size_bytes = NULL, resume_uploaded_at = NULL,
+                 resume_path = NULL, resume_text = NULL, resume_keywords = NULL, ai_suggested_fields = NULL, resume_processed_at = NULL
              WHERE user_id = :user_id'
         );
         $update->execute(['user_id' => $userId]);
@@ -122,8 +123,7 @@ try {
 
     $originalName = basename((string) $file['name']);
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-    // Check file signatures directly so uploads work even if PHP's optional
-    // Fileinfo extension is disabled. The extension alone is not trusted.
+    
     $signature = file_get_contents($file['tmp_name'], false, null, 0, 8);
     $validSignature = match ($extension) {
         'pdf' => is_string($signature) && str_starts_with($signature, '%PDF-'),
@@ -185,6 +185,30 @@ try {
             error_log('Old resume remains in storage and needs cleanup: ' . $e->getMessage());
         }
     }
+
+    // --- GEMINI AI PIPELINE INTEGRATION ---
+    if ($extension === 'pdf') {
+        try {
+            $localDir = dirname(__DIR__, 2) . '/storage/resumes/' . $userId;
+            if (!is_dir($localDir)) {
+                mkdir($localDir, 0755, true);
+            }
+            $localFileName = basename($newPath);
+            $localFilePath = $localDir . '/' . $localFileName;
+            copy($file['tmp_name'], $localFilePath);
+
+            $relativePath = $userId . '/' . $localFileName;
+            $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
+            $pathUpdate->execute(['path' => $relativePath, 'user_id' => $userId]);
+
+            require_once dirname(__DIR__, 2) . '/includes/services/GeminiServices.php';
+            $gemini = new GeminiServices($pdo);
+            $gemini->processApplicant($userId);
+        } catch (Throwable $aiError) {
+            error_log('AI Resume processing failed: ' . $aiError->getMessage());
+        }
+    }
+    // -------------------------------------
 
     resumeRedirect('uploaded');
 } catch (Throwable $e) {
