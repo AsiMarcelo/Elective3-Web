@@ -182,7 +182,7 @@ $csrf = signedCsrfToken($csrfSecret);
      
      <!-- Client-side PDF Preview Component -->
      <div id="pdfPreviewContainer" style="display: none; margin-top: 15px;">
-         <strong style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px;">Preview Resume (Prior to Upload):</strong>
+         <strong style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px;">Resume Preview:</strong>
          <iframe id="pdfPreviewFrame" style="width: 100%; height: 280px; border: 1px solid var(--border-maroon); border-radius: 12px; background: var(--bg-black);"></iframe>
      </div>
 

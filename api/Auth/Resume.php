@@ -205,7 +205,13 @@ try {
             $gemini = new GeminiServices($pdo);
             $gemini->processApplicant($userId);
         } catch (Throwable $aiError) {
-            error_log('AI Resume processing failed: ' . $aiError->getMessage());
+            //error_log('AI Resume processing failed: ' . $aiError->getMessage());
+            echo "<div style='background: #111; color: #ff5555; padding: 30px; font-family: monospace; z-index:99999; position:relative;'>";
+            echo "<h3>EXACT AI PIPELINE ERROR:</h3>";
+            echo htmlspecialchars($aiError->getMessage()) . "<br><br>";
+            echo "<small>In file: " . htmlspecialchars($aiError->getFile()) . " on line " . $aiError->getLine() . "</small>";
+            echo "</div>";
+            exit();
         }
     }
     // -------------------------------------------------------------------------
