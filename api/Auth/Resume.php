@@ -1,7 +1,8 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/storage.php';
+$projectRoot = dirname(__DIR__, 2);
+require_once $projectRoot . '/includes/config/auth.php';
+require_once $projectRoot . '/includes/config/database.php';
+require_once $projectRoot . '/includes/config/storage.php';
 
 startAppSession();
 
