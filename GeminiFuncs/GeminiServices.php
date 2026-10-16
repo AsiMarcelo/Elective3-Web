@@ -120,7 +120,7 @@ class GeminiServices
     /** Takes the keywords as one string, returns the suggested fields as an array. */
     public function classifyApplicants(string $keywords): array
     {
-        $classifications = include dirname(__DIR__) . '/config/classifications.php';
+        $classifications = include dirname(__DIR__) . '/includes/config/classifications.php';
         $list = $classifications['list'];
 
         $prompt = "Classify the following resume keywords into one or more of these categories: "
@@ -280,7 +280,7 @@ class GeminiServices
     private function db(): PDO
     {
         if ($this->pdo === null) {
-            require_once dirname(__DIR__) . '/config/database.php';
+            require_once dirname(__DIR__) . '/includes/config/database.php';
             $this->pdo = getDbConnection();
         }
 
@@ -290,8 +290,12 @@ class GeminiServices
     /** Turns the resume_path stored in the database into a safe full path to a PDF. */
     private function resolveResumePath(string $storedPath): string
     {
-        $baseDir = $_ENV['RESUME_STORAGE_DIR'] ?? getenv('RESUME_STORAGE_DIR') ?: (dirname(__DIR__) . '/storage/resumes');
+        $baseDir = $_ENV['RESUME_STORAGE_DIR'] ?? getenv('RESUME_STORAGE_DIR') ?: '/tmp/resumes';
         $base = realpath($baseDir);
+        if ($base === false) {
+            @mkdir($baseDir, 0755, true);
+            $base = realpath($baseDir);
+        }
         if ($base === false) {
             throw new \RuntimeException('Resume storage folder not found: ' . $baseDir);
         }

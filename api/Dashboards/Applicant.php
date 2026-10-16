@@ -136,7 +136,7 @@ $csrf = signedCsrfToken($csrfSecret);
   <div class="top-meta"><strong><?= h($applicantName) ?></strong><span>Applicant Account</span></div>
  </header>
 
- <section class="card completeness" style="text-align: center;">
+ <section class="card completeness" style="text-align: center; width: 100%;">
   <div>
    <h2>Your profile is <?= $resume ? 'almost ready' : 'pending resume upload' ?></h2>
    <p>Next step: review your job fields so employers can filter and find you.</p>
@@ -179,6 +179,13 @@ $csrf = signedCsrfToken($csrfSecret);
      <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
      <input type="hidden" name="action" value="upload">
      <label class="dropzone"><i class="fa-solid fa-cloud-arrow-up"></i><strong><?= $resume ? 'Replace your resume' : 'Upload your resume' ?></strong>Select a PDF file (max 5 MB)<input type="file" id="resumeInput" name="resume" accept=".pdf" required></label>
+     
+     <!-- Client-side PDF Preview Component -->
+     <div id="pdfPreviewContainer" style="display: none; margin-top: 15px;">
+         <strong style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px;">Preview Resume (Prior to Upload):</strong>
+         <iframe id="pdfPreviewFrame" style="width: 100%; height: 280px; border: 1px solid var(--border-maroon); border-radius: 12px; background: var(--bg-black);"></iframe>
+     </div>
+
      <div class="btn-row"><button class="btn" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Upload & Parse with AI</button></div>
     </form>
 
@@ -240,7 +247,31 @@ document.querySelectorAll('.menu-item').forEach(l=>l.addEventListener('click',()
 const chips=[...document.querySelectorAll('.chip')];
 chips.forEach(c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true')}));
 document.getElementById('acceptSuggestion').addEventListener('click',()=>{chips.find(c=>c.dataset.field===<?= json_encode($suggestedField) ?>)?.setAttribute('aria-pressed','true');showToast('Suggestion selected.')});
-document.getElementById('resumeInput').addEventListener('change',e=>{const f=e.target.files[0];if(f&&f.size>5*1024*1024){showToast('File is larger than 5 MB.');e.target.value='';return}if(f)showToast('Ready to upload '+f.name+'. Press Upload & Parse with AI.');});
+
+// Client-side local file preview before submitting to the database/server
+document.getElementById('resumeInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    const previewContainer = document.getElementById('pdfPreviewContainer');
+    const previewFrame = document.getElementById('pdfPreviewFrame');
+
+    if (f) {
+        if (f.size > 5 * 1024 * 1024) {
+            showToast('File is larger than 5 MB.');
+            e.target.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Render local object URL inside iframe for preview
+        const fileUrl = URL.createObjectURL(f);
+        previewFrame.src = fileUrl;
+        previewContainer.style.display = 'block';
+        showToast('Ready to upload ' + f.name + '. Previewing below.');
+    } else {
+        previewContainer.style.display = 'none';
+    }
+});
+
 document.getElementById('visibility').addEventListener('click',e=>{const b=e.currentTarget,on=b.getAttribute('aria-checked')!=='true';b.setAttribute('aria-checked',on);showToast(on?'Your resume is visible to verified employers.':'Your resume is hidden from employers.')});
 document.getElementById('deleteAccount').addEventListener('click',()=>{if(confirm('Delete your account and all data? This cannot be undone.'))showToast('Account deleted')});
 </script>

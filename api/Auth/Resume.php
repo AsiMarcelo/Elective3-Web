@@ -186,12 +186,12 @@ try {
         }
     }
 
-    // --- GEMINI AI PIPELINE INTEGRATION ---
+    // --- GEMINI AI PIPELINE INTEGRATION (Vercel Serverless /tmp Compatible) ---
     if ($extension === 'pdf') {
         try {
-            $localDir = dirname(__DIR__, 2) . '/storage/resumes/' . $userId;
+            $localDir = '/tmp/resumes/' . $userId;
             if (!is_dir($localDir)) {
-                mkdir($localDir, 0755, true);
+                @mkdir($localDir, 0755, true);
             }
             $localFileName = basename($newPath);
             $localFilePath = $localDir . '/' . $localFileName;
@@ -201,14 +201,14 @@ try {
             $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
             $pathUpdate->execute(['path' => $relativePath, 'user_id' => $userId]);
 
-            require_once dirname(__DIR__, 2) . '/includes/services/GeminiServices.php';
+            require_once dirname(__DIR__, 2) . '/GeminiFuncs/GeminiServices.php';
             $gemini = new GeminiServices($pdo);
             $gemini->processApplicant($userId);
         } catch (Throwable $aiError) {
             error_log('AI Resume processing failed: ' . $aiError->getMessage());
         }
     }
-    // -------------------------------------
+    // -------------------------------------------------------------------------
 
     resumeRedirect('uploaded');
 } catch (Throwable $e) {
