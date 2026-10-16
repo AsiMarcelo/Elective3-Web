@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/config/database.php';
 require_once __DIR__ . '/../../includes/config/auth.php';
-require_once dirname(__DIR__, 2) . '/includes/services/GeminiServices.php';
+require_once dirname(__DIR__) . '/GeminiFuncs/GeminiServices.php';
 startAppSession();
 
 $user_id = $_COOKIE['user_id'] ?? null;
