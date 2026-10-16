@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/auth.php';
 
 startAppSession();
 $error = null;
@@ -28,10 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user && password_verify($password, $user['password_hash'])
                 && in_array($user['role'], ['admin', 'applicant', 'employer'], true)) {
-                session_regenerate_id(true);
-                $_SESSION['user_id'] = (int) $user['id'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['user_name'] = $user['full_name'];
+                
+                $cookieOptions = [
+                    'expires' => time() + 86400, // 1 day
+                    'path' => '/',
+                    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ];
+
+                setcookie('user_id', (string) $user['id'], $cookieOptions);
+                setcookie('user_role', $user['role'], $cookieOptions);
+                setcookie('user_name', $user['full_name'], $cookieOptions);
+    
                 unset($_SESSION['csrf_token']);
 
                 header('Location: /index.php');
@@ -54,7 +63,7 @@ $csrf = csrfToken();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4Hire - Login</title>
@@ -68,7 +77,7 @@ $csrf = csrfToken();
     <?php endif; ?>
     <h2 id="logForm" class="roboto-mono-roboFont">Login</h2>
     <card class="loginCard">
-        <form class="logForm" method="POST" action="login.php">
+        <form class="logForm" method="POST" action="/Auth/login.php">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
             <label class="roboto-mono-roboFont" for="email">Email:</label>
             <input id="email" type="email" name="email" placeholder="Enter your email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">

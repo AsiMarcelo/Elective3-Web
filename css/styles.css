@@ -16,15 +16,16 @@ h2.logForm{
     /*font-style: bold;*/
     shape-outside: rectangle();
     color: #c11212;
-    font-family: "Roboto Mono", monospace;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 50px;;
     font-optical-sizing: auto;
     font-weight: 700;
     font-style: normal;
 }
 
+/*Subject for change kasi nakakalito ang class name at font name*/
 .roboto-mono-roboFont{
-    font-family: "Roboto Mono", monospace;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-optical-sizing: auto;
     font-weight: 300;
     font-style: normal;
@@ -35,7 +36,7 @@ h2.logForm{
     display: flex;
     min-height: 100vh;
     align-items: center;
-    background-color: #5d5858;
+    background-color:rgba(93, 88, 88, 0.3);
     padding: 20px;
     border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -64,7 +65,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-family: "Roboto Mono", monospace;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: #222; /* fallback until your image exists */
     background-image:
         linear-gradient(rgba(0, 0, 0, var(--overlay-opacity)), rgba(0, 0, 0, var(--overlay-opacity))),
@@ -104,7 +105,7 @@ h2.roboto-mono-roboFont {
     margin: 0;                  
     padding: 0;        
     line-height: 1;              
-    font-family: "Roboto Mono", monospace;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #ffffff;
     font-size: 50px;            
     font-weight: 700;

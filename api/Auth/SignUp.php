@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+require_once __DIR__ . '/../../includes/config/auth.php';
 
 startAppSession();
 
-if (isset($_SESSION['user_id'])) {
+if (isset($_COOKIE['user_id'])) {
     header('Location: /index.php');
     exit();
 }
@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? '';
     $fullName = trim($_POST['full_name'] ?? '');
-    $contactNumber = trim($_POST['contact_number'] ?? '');
 
     if (!validCsrfToken($_POST['csrf_token'] ?? null)) {
         $errors[] = 'Your form session expired. Refresh the page and try again.';
@@ -27,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nameLength = preg_match_all('/./us', $fullName);
     if ($fullName === '' || $nameLength === false || $nameLength > 200) {
         $errors[] = 'Please enter a name of 1 to 200 characters.';
-    }
-    if (strlen($contactNumber) > 50) {
-        $errors[] = 'Contact number must be 50 characters or fewer.';
     }
     if (strlen($password) < 8 || strlen($password) > 72) {
         $errors[] = 'Password must be between 8 and 72 bytes.';
@@ -58,31 +54,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($role === 'applicant') {
                 $profile = $pdo->prepare(
-                    'INSERT INTO public.applicants (user_id, contact_number)
-                     VALUES (:user_id, :contact_number)'
+                    'INSERT INTO public.applicants (user_id)
+                     VALUES (:user_id)'
                 );
                 $profile->execute([
                     'user_id' => $userId,
-                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
                 ]);
             } else {
                 $profile = $pdo->prepare(
-                    'INSERT INTO public.employers (user_id, company_name, contact_number)
-                     VALUES (:user_id, :company_name, :contact_number)'
+                    'INSERT INTO public.employers (user_id, company_name)
+                     VALUES (:user_id, :company_name)'
                 );
                 $profile->execute([
                     'user_id' => $userId,
                     'company_name' => $fullName,
-                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
                 ]);
             }
 
             $pdo->commit();
 
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $userId;
-            $_SESSION['user_role'] = $role;
-            $_SESSION['user_name'] = $fullName;
+            // Set secure cookies for Vercel serverless session persistence
+            $cookieOptions = [
+                'expires' => time() + 86400, // 1 day
+                'path' => '/',
+                'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ];
+
+            setcookie('user_id', (string) $userId, $cookieOptions);
+            setcookie('user_role', $role, $cookieOptions);
+            setcookie('user_name', $fullName, $cookieOptions);
+            
             unset($_SESSION['csrf_token']);
 
             header('Location: /index.php');
@@ -115,14 +118,12 @@ $csrf = csrfToken();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create an Account</title>
+    <title>4Hire - Create an Account</title>
 </head>
-<body>
-    <h2 class="logForm">Sign Up</h2>
-
+<body style="background-color:black">
     <?php if ($errors): ?>
         <ul role="alert" style="color:red">
             <?php foreach ($errors as $error): ?>
@@ -131,34 +132,39 @@ $csrf = csrfToken();
         </ul>
     <?php endif; ?>
 
-    <form method="POST" action="SignUp.php">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <div>
-            <label class="roboto-mono-roboFont" for="full_name">Full Name / Company Name:</label><br>
-            <input type="text" id="full_name" name="full_name" maxlength="200" required value="<?= htmlspecialchars($_POST['full_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
-            <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="contact_number">Contact Number (optional):</label><br>
-            <input type="tel" id="contact_number" name="contact_number" maxlength="50" autocomplete="tel" value="<?= htmlspecialchars($_POST['contact_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont" for="password">Password:</label><br>
-            <input type="password" id="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
-        </div><br>
-        <div>
-            <label class="roboto-mono-roboFont">I am signing up as:</label><br>
-            <input type="radio" id="applicant" name="role" value="applicant" checked>
-            <label class="roboto-mono-roboFont" for="applicant">Job Applicant</label><br>
-            <input type="radio" id="employer" name="role" value="employer">
-            <label class="roboto-mono-roboFont" for="employer">Employer / Recruiter</label>
-        </div><br>
-        <button type="submit">Create Account</button>
-    </form>
+    <h2 id="logForm" class="roboto-mono-roboFont">Sign Up</h2>
+    
+    <card class="loginCard">
+        <form class="logForm" method="POST" action="SignUp.php">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+            
+            <div>
+                <label class="roboto-mono-roboFont" for="full_name">Full Name / Company Name:</label><br>
+                <input type="text" id="full_name" name="full_name" maxlength="200" required value="<?= htmlspecialchars($_POST['full_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div><br>
 
-    <p class="roboto-mono-roboFont">Already have an account? <a href="/Auth/login.php">Log in here</a>.</p>
+            <div>
+                <label class="roboto-mono-roboFont" for="email">Email Address:</label><br>
+                <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div><br>
+
+            <div>
+                <label class="roboto-mono-roboFont" for="password">Password:</label><br>
+                <input type="password" id="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
+            </div><br>
+
+            <div>
+                <label class="roboto-mono-roboFont">I am signing up as:</label><br>
+                <input type="radio" id="applicant" name="role" value="applicant" checked>
+                <label class="roboto-mono-roboFont" for="applicant">Job Applicant</label><br>
+                <input type="radio" id="employer" name="role" value="employer">
+                <label class="roboto-mono-roboFont" for="employer">Employer / Recruiter</label>
+            </div><br>
+
+            <button type="submit">Create Account</button>
+            
+            <p class="roboto-mono-roboFont">Already have an account? <a href="/Auth/login.php">Log in here</a>.</p>
+        </form>
+    </card>
 </body>
 </html>

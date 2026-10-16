@@ -1,14 +1,7 @@
 <?php
-// Vercel-style PHP deployments place endpoint files under /api, while the
-// local project keeps Auth beside config. Resolve the project root in either layout.
-$projectRoot = dirname(__DIR__);
-if (strtolower(basename($projectRoot)) === 'api') {
-    $projectRoot = dirname($projectRoot);
-}
-
-require_once $projectRoot . '/config/auth.php';
-require_once $projectRoot . '/config/database.php';
-require_once $projectRoot . '/config/storage.php';
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/storage.php';
 
 startAppSession();
 

@@ -1,13 +1,16 @@
-    <?php
-    session_start();
+<?php
+    ob_start();
+    require_once __DIR__ . '/../includes/config/auth.php';
+    $user_id = $_COOKIE['user_id'] ?? null;
+    $user_role = $_COOKIE['user_role'] ?? null;
 
-    // Redirect unauthenticated users back to login
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
-        header('Location: Auth/login.php');
+    if (!$user_id || !$user_role) {
+        header('Location: /Auth/login.php');
         exit();
     }
-    //Route based on account type
-    switch ($_SESSION['user_role']) {
+
+    // Route based on account type
+    switch ($user_role) {
         case 'admin':
             header('Location: /Dashboards/Admin.php');
             exit();
@@ -21,8 +24,9 @@
             exit();
 
         default:
-        // Handle unexpected role or log out
-            session_destroy();
+            // Clear cookies on invalid role
+            setcookie('user_id', '', time() - 3600, '/');
+            setcookie('user_role', '', time() - 3600, '/');
             header('Location: /Auth/login.php');
             exit();
     }
