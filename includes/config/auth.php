@@ -33,3 +33,29 @@ function validCsrfToken(mixed $token): bool
         && isset($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
 }
+
+function signedCsrfToken(string $secret): string
+{
+    if ($secret === '') {
+        return '';
+    }
+
+    $payload = (string) (time() + 1800) . '.' . bin2hex(random_bytes(16));
+    return $payload . '.' . hash_hmac('sha256', $payload, $secret);
+}
+
+function validSignedCsrfToken(mixed $token, string $secret): bool
+{
+    if ($secret === '' || !is_string($token)
+        || !preg_match('/^(\d{10})\.([a-f0-9]{32})\.([a-f0-9]{64})$/D', $token, $matches)) {
+        return false;
+    }
+
+    $expiresAt = (int) $matches[1];
+    if ($expiresAt < time() || $expiresAt > time() + 1800) {
+        return false;
+    }
+
+    $payload = $matches[1] . '.' . $matches[2];
+    return hash_equals(hash_hmac('sha256', $payload, $secret), $matches[3]);
+}

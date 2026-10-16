@@ -78,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !validCsrfToken($_POST['csrf_token'] ?? null)) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST'
+    || !validSignedCsrfToken($_POST['csrf_token'] ?? null, $_COOKIE['user_sig'])) {
     http_response_code(400);
     exit('Invalid request. Refresh the page and try again.');
 }

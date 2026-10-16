@@ -61,7 +61,8 @@ $resumeNotices = [
  'error' => 'Resume storage is not ready or the request failed. Check server configuration and logs.',
 ];
 $resumeNotice = $resumeNotices[$_GET['resume'] ?? ''] ?? null;
-$csrf = csrfToken();
+$csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
+$csrf = signedCsrfToken($csrfSecret);
 ?>
 <!DOCTYPE html>
 <html lang="en">
