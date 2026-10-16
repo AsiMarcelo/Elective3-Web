@@ -6,12 +6,33 @@ require_once $projectRoot . '/includes/config/storage.php';
 
 startAppSession();
 
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'applicant') {
+$userId = filter_var($_COOKIE['user_id'] ?? null, FILTER_VALIDATE_INT);
+if (!$userId || ($_COOKIE['user_role'] ?? '') !== 'applicant' || !is_string($_COOKIE['user_sig'] ?? null)) {
     http_response_code(403);
     exit('Applicant access required.');
 }
 
-$userId = (int) $_SESSION['user_id'];
+try {
+    $authPdo = getDbConnection();
+    $authQuery = $authPdo->prepare(
+        "SELECT id, password_hash FROM public.users WHERE id = :user_id AND role = 'applicant' LIMIT 1"
+    );
+    $authQuery->execute(['user_id' => $userId]);
+    $authUser = $authQuery->fetch(PDO::FETCH_ASSOC);
+    $expectedSignature = $authUser
+        ? hash_hmac('sha256', $authUser['id'] . '|applicant', $authUser['password_hash'])
+        : '';
+    if (!$authUser || !hash_equals($expectedSignature, $_COOKIE['user_sig'])) {
+        http_response_code(403);
+        exit('Applicant access required.');
+    }
+} catch (Throwable $e) {
+    error_log('Resume authorization failed: ' . $e->getMessage());
+    http_response_code(503);
+    exit('Unable to verify your account right now. Please try again.');
+}
+
+$userId = (int) $userId;
 $bucket = 'applicant-resumes';
 
 function resumeRedirect(string $result): never

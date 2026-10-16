@@ -40,6 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie('user_id', (string) $user['id'], $cookieOptions);
                 setcookie('user_role', $user['role'], $cookieOptions);
                 setcookie('user_name', $user['full_name'], $cookieOptions);
+                setcookie(
+                    'user_sig',
+                    hash_hmac('sha256', $user['id'] . '|' . $user['role'], $user['password_hash']),
+                    $cookieOptions
+                );
     
                 unset($_SESSION['csrf_token']);
 
