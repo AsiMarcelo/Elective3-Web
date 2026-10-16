@@ -136,7 +136,7 @@ $csrf = signedCsrfToken($csrfSecret);
   <div class="top-meta"><strong><?= h($applicantName) ?></strong><span>Applicant Account</span></div>
  </header>
 
- <section class="card completeness" style="text-align: center; width: 100%;">
+ <section class="card completeness" style="text-align: left; width: 100%;">
   <div>
    <h2>Your profile is <?= $resume ? 'almost ready' : 'pending resume upload' ?></h2>
    <p>Next step: review your job fields so employers can filter and find you.</p>
