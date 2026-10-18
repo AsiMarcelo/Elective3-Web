@@ -75,12 +75,12 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
   <ul class="menu">
    <li><a href="#" class="menu-item" title="Company Profile" data-section="Company Profile"><i class="menu-icon fa-solid fa-building"></i><span>Company Profile</span></a></li>
    
-   <!-- Employer Verification Widget moved above settings without icons -->
+   <!-- Employer Verification Widget with verified circle to the left of the text -->
    <div style="padding: 12px 14px; margin: 8px 8px; background: rgba(0,0,0,0.25); border-radius: 10px; border: 1px solid var(--border-maroon); font-size: 12px;">
     <div style="color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">Your account is fully verified to browse applicant profiles and contact candidates.</div>
-    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; color: #32CD32; font-weight: 600;">
+    <div style="display: flex; align-items: center; gap: 6px; color: #32CD32; font-weight: 600;">
+     <div style="width: 8px; height: 8px; border-radius: 50%; background: #32CD32; flex-shrink: 0;"></div>
      <span><?= h($verificationStatus) ?></span>
-     <div style="width: 8px; height: 8px; border-radius: 50%; background: #32CD32;"></div>
     </div>
    </div>
 
