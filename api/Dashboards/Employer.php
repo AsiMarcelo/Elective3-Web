@@ -55,6 +55,12 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
 <title>4Hire | Employer Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="/css/dashboard.css">
+<style>
+  /* Reduce sidebar width by 12px (252px - 12px = 240px) */
+  :root {
+    --sidebar-width: 240px;
+  }
+</style>
 </head>
 <body>
 
@@ -68,7 +74,16 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
   <div class="menu-title">Account</div>
   <ul class="menu">
    <li><a href="#" class="menu-item" title="Company Profile" data-section="Company Profile"><i class="menu-icon fa-solid fa-building"></i><span>Company Profile</span></a></li>
-   <li><a href="#" class="menu-item" title="Verification" data-section="Verification"><i class="menu-icon fa-solid fa-shield-halved"></i><span>Verification</span></a></li>
+   
+   <!-- Employer Verification Widget moved above settings without icons -->
+   <div style="padding: 12px 14px; margin: 8px 8px; background: rgba(0,0,0,0.25); border-radius: 10px; border: 1px solid var(--border-maroon); font-size: 12px;">
+    <div style="color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">Your account is fully verified to browse applicant profiles and contact candidates.</div>
+    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; color: #32CD32; font-weight: 600;">
+     <span><?= h($verificationStatus) ?></span>
+     <div style="width: 8px; height: 8px; border-radius: 50%; background: #32CD32;"></div>
+    </div>
+   </div>
+
    <li><a href="#" class="menu-item" title="Settings" data-section="Settings"><i class="menu-icon fa-solid fa-gear"></i><span>Settings</span></a></li>
   </ul>
  </div>
@@ -78,12 +93,9 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
 </aside>
 
 <main class="main">
- <!-- 35px Maroon Top Branding Bar -->
- <div style="background-color: var(--border-maroon, #800000); height: 35px; display: flex; align-items: center; padding: 0 16px; border-radius: 6px; margin-bottom: 16px; color: #fff;">
-  <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
-   <div style="background: rgba(255,255,255,0.2); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 3px; font-size: 11px;">4</div>
-   <span>4<span>Hire</span> &bull; <span style="font-weight: 400; opacity: 0.85;">Employer platform</span></span>
-  </div>
+ <!-- 90px Top Banner with 4Hire logo placeholder -->
+ <div style="background-color: var(--border-maroon, #800000); height: 90px; display: flex; align-items: center; justify-content: center; padding: 0 24px; border-radius: 12px; margin-bottom: 24px; color: #fff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; box-shadow: var(--shadow);">
+  <span>4Hire logo</span>
  </div>
 
  <header class="top-header">
@@ -91,25 +103,16 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
    <h1 class="page-title">Employer Dashboard</h1>
    <p class="page-description">Browse and filter live candidate profiles and resumes.</p>
   </div>
-  <!-- Employer Profile & Verification Status replacing company names on the right -->
   <div style="display: flex; align-items: center; gap: 12px;">
    <div class="user-avatar" style="width: 36px; height: 36px; font-size: 13px; display: flex; align-items: center; justify-content: center; background: var(--border-maroon); color: #fff; border-radius: 50%; font-weight: bold;"><?= h(initials($companyName)) ?></div>
    <div>
     <strong style="font-size: 13px; display: block; line-height: 1.2; color: var(--text-main);"><?= h($companyName) ?></strong>
-    <span style="font-size: 11px; color: var(--accent-gold); display: inline-flex; align-items: center; gap: 4px;">
-     <i class="fa-solid fa-circle-check" style="font-size: 10px;"></i> <?= h($verificationStatus) ?>
+    <span style="font-size: 11px; color: #32CD32; display: inline-flex; align-items: center; gap: 4px;">
+     <span style="width: 6px; height: 6px; border-radius: 50%; background: #32CD32; display: inline-block;"></span> <?= h($verificationStatus) ?>
     </span>
    </div>
   </div>
  </header>
-
- <section class="verification" style="margin-bottom: 24px;">
-  <div class="verification-left">
-   <div class="verification-icon"><i class="fa-solid fa-circle-check"></i></div>
-   <div><h4>Employer Verification Status</h4><p>Your account is fully verified to browse applicant profiles and contact candidates.</p></div>
-  </div>
-  <span class="verified"><?= h($verificationStatus) ?></span>
- </section>
 
  <!-- Resume Classification Filter Section -->
  <section class="card" style="margin-bottom: 24px;">
@@ -150,7 +153,7 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
           <strong><?= h($applicant['full_name']) ?></strong>
           <small>Uploaded <?= h(date('M d, Y', strtotime($applicant['resume_uploaded_at']))) ?></small>
          </div>
-         <span class="status">Verified</span>
+         <span class="status" style="color: #32CD32; border-color: #32CD32;">Verified</span>
         </div>
 
         <div style="margin-bottom: 14px;">
