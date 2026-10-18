@@ -13,8 +13,34 @@ if (!$user_id || $user_role !== 'employer') {
 
 $pdo = getDbConnection();
 
+$profilePicPath = null;
 try {
-    $stmt = $pdo->prepare('SELECT company_name, verification_status FROM public.employers WHERE user_id = :user_id LIMIT 1');
+    // Handle Profile Picture Update Action for Employer
+    if (isset($_POST['action']) && $_POST['action'] === 'update_profile_pic') {
+        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+            $fileTmp = $_FILES['profile_pic']['tmp_name'];
+            $fileName = basename($_FILES['profile_pic']['name']);
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            if (in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp'])) {
+                $targetDir = '/tmp/avatars/';
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
+                $newFileName = 'employer_' . $user_id . '_' . time() . '.' . $fileExt;
+                $destination = $targetDir . $newFileName;
+                
+                if (move_uploaded_file($fileTmp, $destination)) {
+                    $updateStmt = $pdo->prepare('UPDATE public.users SET profile_picture_path = :path WHERE id = :id');
+                    $updateStmt->execute(['path' => $destination, 'id' => (int)$user_id]);
+                    header('Location: /Dashboards/Employer.php?profile=updated');
+                    exit();
+                }
+            }
+        }
+    }
+
+    $stmt = $pdo->prepare('SELECT e.company_name, e.verification_status, u.profile_picture_path FROM public.employers e JOIN public.users u ON u.id = e.user_id WHERE e.user_id = :user_id LIMIT 1');
     $stmt->execute(['user_id' => (int)$user_id]);
     $employerRecord = $stmt->fetch();
 } catch (Throwable $e) {
@@ -24,6 +50,7 @@ try {
 $companyName = $employerRecord['company_name'] ?? ($_COOKIE['user_name'] ?? 'Employer Company');
 $employerName = $_COOKIE['user_name'] ?? 'Employer Account';
 $verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
+$profilePicPath = $employerRecord['profile_picture_path'] ?? null;
 
 // Load classifications config for filtering
 $classificationsConfig = include __DIR__ . '/../../includes/config/classifications.php';
@@ -104,7 +131,14 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
    <p class="page-description">Browse and filter live candidate profiles and resumes.</p>
   </div>
   <div style="display: flex; align-items: center; gap: 12px;">
-   <div class="user-avatar" style="width: 36px; height: 36px; font-size: 13px; display: flex; align-items: center; justify-content: center; background: var(--border-maroon); color: #fff; border-radius: 50%; font-weight: bold;"><?= h(initials($companyName)) ?></div>
+   <!-- Profile Picture beside user name -->
+   <div onclick="openProfileModal()" style="cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: var(--border-maroon); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--accent-gold);" title="Click to update profile picture">
+    <?php if ($profilePicPath): ?>
+     <img src="<?= h($profilePicPath) ?>" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+    <?php else: ?>
+     <span style="font-weight: 600; font-size: 13px; color: var(--text-light);"><?= h(initials($companyName)) ?></span>
+    <?php endif; ?>
+   </div>
    <div>
     <strong style="font-size: 13px; display: block; line-height: 1.2; color: var(--text-main);"><?= h($companyName) ?></strong>
     <span style="font-size: 11px; color: #32CD32; display: inline-flex; align-items: center; gap: 4px;">
@@ -199,11 +233,45 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
  </section>
 
 </main>
+
+<!-- Profile Picture Modal Popup -->
+<div id="profileModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+ <div style="background: var(--card-maroon); border: 1px solid var(--border-maroon); border-radius: 16px; padding: 24px; width: 360px; max-width: 90%; position: relative; box-shadow: var(--shadow);">
+  <button onclick="closeProfileModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-light); font-size: 18px; cursor: pointer;" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+  <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-light);">Company Profile Picture</h3>
+  
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 20px;">
+   <div style="width: 120px; height: 120px; border-radius: 50%; background: var(--border-maroon); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 3px solid var(--accent-gold);">
+    <?php if ($profilePicPath): ?>
+     <img src="<?= h($profilePicPath) ?>" alt="Profile Preview" style="width: 100%; height: 100%; object-fit: cover;">
+    <?php else: ?>
+     <span style="font-size: 32px; font-weight: 700; color: var(--text-light);"><?= h(initials($companyName)) ?></span>
+    <?php endif; ?>
+   </div>
+   <span style="font-size: 13px; color: var(--text-muted); text-align: center;"><?= h($companyName) ?> (User ID: <?= (int)$user_id ?>)</span>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
+   <input type="hidden" name="action" value="update_profile_pic">
+   <label style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Select new image (JPG, PNG, WebP):</label>
+   <input type="file" name="profile_pic" accept="image/png, image/jpeg, image/webp" required style="font-size: 12px; color: var(--text-light);">
+   <button type="submit" class="btn" style="width: 100%; justify-content: center; margin-top: 8px;"><i class="fa-solid fa-upload"></i> Upload & Change Picture</button>
+  </form>
+ </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const toast=document.getElementById('toast');let t;
 function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(t);t=setTimeout(()=>toast.classList.remove('show'),2800)}
+
+function openProfileModal() {
+    document.getElementById('profileModal').style.display = 'flex';
+}
+function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
 
 document.querySelectorAll('.menu-item').forEach(l=>l.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.menu-item').forEach(a=>{a.classList.remove('active');a.removeAttribute('aria-current')});l.classList.add('active');l.setAttribute('aria-current','page');if(l.dataset.section!=='Dashboard')showToast(l.dataset.section+' selected — connect this menu to its page or route.')}));
 
