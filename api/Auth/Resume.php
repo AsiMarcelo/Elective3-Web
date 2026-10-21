@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
     }
 }
 
-// For applicant-only POST actions (upload/delete)
+// For applicant-only POST actions (upload/delete/reparse)
 if ($userRole !== 'applicant') {
     http_response_code(403);
     exit('Applicant access required.');
@@ -142,6 +142,30 @@ try {
     $pdo = getDbConnection();
     $oldPath = applicantResumePath($pdo, $targetUserId);
     $action = $_POST['action'] ?? '';
+
+    // Handle manual AI re-analysis reparse action
+    if ($action === 'reparse') {
+        if ($oldPath === null) {
+            resumeRedirect('missing');
+        }
+        try {
+            $clearStmt = $pdo->prepare(
+                'UPDATE public.applicants
+                 SET resume_keywords = NULL, ai_suggested_fields = NULL, resume_processed_at = NULL
+                 WHERE user_id = :user_id'
+            );
+            $clearStmt->execute(['user_id' => $targetUserId]);
+
+            require_once dirname(__DIR__) . '/GeminiFuncs/GeminiServices.php';
+            $gemini = new GeminiServices($pdo);
+            $gemini->processApplicant($targetUserId);
+
+            resumeRedirect('reparsed');
+        } catch (Throwable $e) {
+            error_log('Manual re-parse failed: ' . $e->getMessage());
+            resumeRedirect('error');
+        }
+    }
 
     if ($action === 'delete') {
         if ($oldPath === null) {
