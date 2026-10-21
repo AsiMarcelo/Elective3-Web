@@ -204,13 +204,13 @@ $csrf = signedCsrfToken($csrfSecret);
      <span class="status" id="fileStatus"><?= h($resume['status']) ?></span>
     </div>
     <?php else: ?>
-    <p class="empty-note">You have not uploaded a resume yet[cite: 7].</p>
+    <p class="empty-note">You have not uploaded a resume yet.</p>
     <?php endif; ?>
 
     <ul class="steps" aria-label="Resume processing">
-     <li class="<?= $resume ? '' : 'todo' ?>"><span class="step-dot"><?= $resume ? '<i class="fa-solid fa-check"></i>' : '1' ?></span>Stored in private storage[cite: 7]</li>
-     <li class="<?= $isProcessed ? '' : 'todo' ?>"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '2' ?></span>PDF converted to text via PdfToText parser[cite: 7]</li>
-     <li class="<?= $isProcessed ? '' : 'todo' ?>" id="stepAi"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '3' ?></span>AI keyword matching & classification completed[cite: 7]</li>
+     <li class="<?= $resume ? '' : 'todo' ?>"><span class="step-dot"><?= $resume ? '<i class="fa-solid fa-check"></i>' : '1' ?></span>Stored in private storage</li>
+     <li class="<?= $isProcessed ? '' : 'todo' ?>"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '2' ?></span>PDF converted to text via PdfToText parser</li>
+     <li class="<?= $isProcessed ? '' : 'todo' ?>" id="stepAi"><span class="step-dot"><?= $isProcessed ? '<i class="fa-solid fa-check"></i>' : '3' ?></span>AI keyword matching & classification completed</li>
     </ul>
 
     <?php if (!empty($resumeKeywords)): ?>

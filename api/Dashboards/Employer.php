@@ -15,7 +15,7 @@ $pdo = getDbConnection();
 
 $profilePicPath = null;
 try {
-    // Handle Profile Picture Update Action for Employer
+    // Handle Profile Picture Update Action for Employer via Supabase Storage
     if (isset($_POST['action']) && $_POST['action'] === 'update_profile_pic') {
         $csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
         if (!validSignedCsrfToken($_POST['csrf_token'] ?? null, $csrfSecret)) {
@@ -29,18 +29,23 @@ try {
             $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             
             if (in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $uploadSubDir = '/uploads/avatars/';
-                $targetDir = __DIR__ . '/../../public' . $uploadSubDir;
-                if (!is_dir($targetDir)) {
-                    mkdir($targetDir, 0755, true);
-                }
-                $newFileName = 'employer_' . $user_id . '_' . time() . '.' . $fileExt;
-                $destinationPath = $targetDir . $newFileName;
-                $dbPath = $uploadSubDir . $newFileName;
+                require_once __DIR__ . '/../../includes/config/storage.php';
                 
-                if (move_uploaded_file($fileTmp, $destinationPath)) {
+                $bucket = 'user-avatars';
+                $newPath = $user_id . '/' . time() . '.' . $fileExt;
+                $contents = file_get_contents($fileTmp);
+                
+                if ($contents !== false) {
+                    storageRequest('POST', 'object/' . storageObjectPath($bucket, $newPath), $contents, [
+                        'Content-Type: image/' . ($fileExt === 'jpg' ? 'jpeg' : $fileExt),
+                        'x-upsert: true',
+                    ]);
+
+                    [$supabaseUrl] = storageConfig();
+                    $publicUrl = $supabaseUrl . '/storage/v1/object/public/' . $bucket . '/' . $newPath;
+
                     $updateStmt = $pdo->prepare('UPDATE public.users SET profile_picture_path = :path WHERE id = :id');
-                    $updateStmt->execute(['path' => $dbPath, 'id' => (int)$user_id]);
+                    $updateStmt->execute(['path' => $publicUrl, 'id' => (int)$user_id]);
                     header('Location: /Dashboards/Employer.php?profile=updated');
                     exit();
                 }
@@ -198,7 +203,6 @@ $csrf = signedCsrfToken($csrfSecret);
           <strong><?= h($applicant['full_name']) ?></strong>
           <small>Uploaded <?= h(date('M d, Y', strtotime($applicant['resume_uploaded_at']))) ?></small>
          </div>
-         <span class="status" style="color: #32CD32; border-color: #32CD32;">Verified</span>
         </div>
 
         <div style="margin-bottom: 14px;">
@@ -215,7 +219,7 @@ $csrf = signedCsrfToken($csrfSecret);
         </div>
 
         <div style="margin-bottom: 16px;">
-         <strong style="font-size: 13px; color: var(--text-muted);">Extracted Keywords:</strong>
+         <strong style="font-size: 13px; color: var(--text-muted);">Resume Keywords:</strong>
          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; max-height: 90px; overflow-y: auto;">
           <?php if (!empty($keywordsArr)): ?>
            <?php foreach($keywordsArr as $kw): ?>
