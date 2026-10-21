@@ -78,10 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
             resumeRedirect('missing');
         }
 
+        // Generate a short-lived internal signed URL for server-side retrieval
         $signed = storageRequest(
             'POST',
             'object/sign/' . storageObjectPath($bucket, $path),
-            json_encode(['expiresIn' => 60], JSON_THROW_ON_ERROR),
+            json_encode(['expiresIn' => 30], JSON_THROW_ON_ERROR),
             ['Content-Type: application/json']
         );
         $signedUrl = $signed['signedURL'] ?? '';
@@ -92,13 +93,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
             [$supabaseUrl] = storageConfig();
             $signedUrl = $supabaseUrl . '/storage/v1' . $signedUrl;
         }
-        header('Location: ' . $signedUrl, true, 302);
+
+        // Fetch file metadata for proper headers
+        $metaQuery = $pdo->prepare('SELECT resume_original_name, resume_mime_type FROM public.applicants WHERE user_id = :user_id');
+        $metaQuery->execute(['user_id' => $targetUserId]);
+        $meta = $metaQuery->fetch(PDO::FETCH_ASSOC);
+        
+        $mimeType = $meta['resume_mime_type'] ?? 'application/pdf';
+        $originalName = $meta['resume_original_name'] ?? 'resume.pdf';
+
+        // Secure Server-Side Proxy Streaming (Prevents direct public URL exposure)
+        $fileContent = @file_get_contents($signedUrl);
+        if ($fileContent === false) {
+            throw new RuntimeException('Could not retrieve file content from storage.');
+        }
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: inline; filename="' . basename($originalName) . '"');
+        header('Content-Length: ' . strlen($fileContent));
+        echo $fileContent;
         exit();
+
     } catch (Throwable $e) {
         error_log('Resume download failed: ' . $e->getMessage());
         if ($userRole === 'employer') {
             http_response_code(500);
-            exit('Failed to generate download link.');
+            exit('Failed to stream resume file.');
         }
         resumeRedirect('error');
     }
@@ -233,7 +253,10 @@ try {
 
             $relativePath = $targetUserId . '/' . $localFileName;
             $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
-            $pathUpdate->execute(['path' => $relativePath, 'user_id' => $targetUserId]);
+           $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
+            if ($pathUpdate !== false) {
+                $pathUpdate->execute(['path' => $relativePath, 'user_id' => $targetUserId]);
+                }
 
             require_once dirname(__DIR__, 2) . '/GeminiFuncs/GeminiServices.php';
             $gemini = new GeminiServices($pdo);
