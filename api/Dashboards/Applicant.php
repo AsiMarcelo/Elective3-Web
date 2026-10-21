@@ -24,22 +24,30 @@ try {
     
     // Handle Profile Picture Update Action
     if (isset($_POST['action']) && $_POST['action'] === 'update_profile_pic') {
+        $csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
+        if (!validSignedCsrfToken($_POST['csrf_token'] ?? null, $csrfSecret)) {
+            http_response_code(400);
+            exit('Invalid request. Refresh the page and try again.');
+        }
+
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
             $fileTmp = $_FILES['profile_pic']['tmp_name'];
             $fileName = basename($_FILES['profile_pic']['name']);
             $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             
             if (in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $targetDir = '/tmp/avatars/';
+                $uploadSubDir = '/uploads/avatars/';
+                $targetDir = __DIR__ . '/../../public' . $uploadSubDir;
                 if (!is_dir($targetDir)) {
                     mkdir($targetDir, 0755, true);
                 }
                 $newFileName = 'user_' . $user_id . '_' . time() . '.' . $fileExt;
-                $destination = $targetDir . $newFileName;
+                $destinationPath = $targetDir . $newFileName;
+                $dbPath = $uploadSubDir . $newFileName;
                 
-                if (move_uploaded_file($fileTmp, $destination)) {
+                if (move_uploaded_file($fileTmp, $destinationPath)) {
                     $updateStmt = $pdo->prepare('UPDATE public.users SET profile_picture_path = :path WHERE id = :id');
-                    $updateStmt->execute(['path' => $destination, 'id' => (int)$user_id]);
+                    $updateStmt->execute(['path' => $dbPath, 'id' => (int)$user_id]);
                     header('Location: /Dashboards/Applicant.php?profile=updated');
                     exit();
                 }
@@ -277,7 +285,7 @@ $csrf = signedCsrfToken($csrfSecret);
   </div>
 
   <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
-   <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>"> <!-- ADDED MISSING CSRF TOKEN -->
+   <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
    <input type="hidden" name="action" value="update_profile_pic">
    <label style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Select new image (JPG, PNG, WebP):</label>
    <input type="file" name="profile_pic" accept="image/png, image/jpeg, image/webp" required style="font-size: 12px; color: var(--text-light);">

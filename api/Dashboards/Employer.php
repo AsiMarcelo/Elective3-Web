@@ -29,16 +29,18 @@ try {
             $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             
             if (in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $targetDir = '/tmp/avatars/';
+                $uploadSubDir = '/uploads/avatars/';
+                $targetDir = __DIR__ . '/../../public' . $uploadSubDir;
                 if (!is_dir($targetDir)) {
                     mkdir($targetDir, 0755, true);
                 }
                 $newFileName = 'employer_' . $user_id . '_' . time() . '.' . $fileExt;
-                $destination = $targetDir . $newFileName;
+                $destinationPath = $targetDir . $newFileName;
+                $dbPath = $uploadSubDir . $newFileName;
                 
-                if (move_uploaded_file($fileTmp, $destination)) {
+                if (move_uploaded_file($fileTmp, $destinationPath)) {
                     $updateStmt = $pdo->prepare('UPDATE public.users SET profile_picture_path = :path WHERE id = :id');
-                    $updateStmt->execute(['path' => $destination, 'id' => (int)$user_id]);
+                    $updateStmt->execute(['path' => $dbPath, 'id' => (int)$user_id]);
                     header('Location: /Dashboards/Employer.php?profile=updated');
                     exit();
                 }
