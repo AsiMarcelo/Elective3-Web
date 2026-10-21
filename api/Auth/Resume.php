@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
             resumeRedirect('missing');
         }
 
-        // Generate a short-lived internal signed URL for server-side retrieval
+        // Generate a short-lived internal signed URL for server-side retrieval only
         $signed = storageRequest(
             'POST',
             'object/sign/' . storageObjectPath($bucket, $path),
@@ -253,10 +253,9 @@ try {
 
             $relativePath = $targetUserId . '/' . $localFileName;
             $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
-           $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
             if ($pathUpdate !== false) {
                 $pathUpdate->execute(['path' => $relativePath, 'user_id' => $targetUserId]);
-                }
+            }
 
             require_once dirname(__DIR__, 2) . '/GeminiFuncs/GeminiServices.php';
             $gemini = new GeminiServices($pdo);

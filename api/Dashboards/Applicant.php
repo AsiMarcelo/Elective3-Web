@@ -57,12 +57,18 @@ try {
 
     if (isset($_GET['action']) && $_GET['action'] === 'reparse') {
         try {
+            // Clear out old extracted text/keywords temporarily to force a fresh parse
+            $clearStmt = $pdo->prepare('UPDATE public.applicants SET resume_text = NULL, resume_keywords = NULL, ai_suggested_fields = NULL, resume_processed_at = NULL WHERE user_id = :user_id');
+            $clearStmt->execute(['user_id' => (int)$user_id]);
+
             $gemini = new GeminiServices($pdo);
             $gemini->processApplicant((int)$user_id);
             header('Location: /Dashboards/Applicant.php?resume=reparsed');
             exit();
         } catch (Throwable $e) {
             error_log('Manual reparse failed: ' . $e->getMessage());
+            header('Location: /Dashboards/Applicant.php?resume=error');
+            exit();
         }
     }
 
