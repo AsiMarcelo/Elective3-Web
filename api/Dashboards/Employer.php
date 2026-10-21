@@ -17,6 +17,12 @@ $profilePicPath = null;
 try {
     // Handle Profile Picture Update Action for Employer
     if (isset($_POST['action']) && $_POST['action'] === 'update_profile_pic') {
+        $csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
+        if (!validSignedCsrfToken($_POST['csrf_token'] ?? null, $csrfSecret)) {
+            http_response_code(400);
+            exit('Invalid request. Refresh the page and try again.');
+        }
+
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
             $fileTmp = $_FILES['profile_pic']['tmp_name'];
             $fileName = basename($_FILES['profile_pic']['name']);
@@ -73,6 +79,9 @@ try {
 
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupper(substr($w[0],0,1) . (count($w)>1 ? substr(end($w),0,1) : '')); }
+
+$csrfSecret = is_string($_COOKIE['user_sig'] ?? null) ? $_COOKIE['user_sig'] : '';
+$csrf = signedCsrfToken($csrfSecret);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -252,6 +261,7 @@ function initials($name){ $w = preg_split('/\s+/', trim($name)); return strtoupp
   </div>
 
   <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
+   <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
    <input type="hidden" name="action" value="update_profile_pic">
    <label style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Select new image (JPG, PNG, WebP):</label>
    <input type="file" name="profile_pic" accept="image/png, image/jpeg, image/webp" required style="font-size: 12px; color: var(--text-light);">

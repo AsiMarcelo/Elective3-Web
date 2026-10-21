@@ -38,7 +38,6 @@ try {
                 $destination = $targetDir . $newFileName;
                 
                 if (move_uploaded_file($fileTmp, $destination)) {
-                    // Update user profile picture path in database
                     $updateStmt = $pdo->prepare('UPDATE public.users SET profile_picture_path = :path WHERE id = :id');
                     $updateStmt->execute(['path' => $destination, 'id' => (int)$user_id]);
                     header('Location: /Dashboards/Applicant.php?profile=updated');
@@ -48,7 +47,6 @@ try {
         }
     }
 
-    // Check if processing was requested or pending
     if (isset($_GET['action']) && $_GET['action'] === 'reparse') {
         try {
             $gemini = new GeminiServices($pdo);
@@ -165,7 +163,6 @@ $csrf = signedCsrfToken($csrfSecret);
  <header class="top-header">
   <div><h1 class="page-title">My Dashboard</h1><p class="page-description">Keep your resume and job fields up to date so verified employers can find you.</p></div>
   <div class="top-meta" style="display: flex; align-items: center; gap: 12px;">
-   <!-- Profile Picture beside user name -->
    <div onclick="openProfileModal()" style="cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: var(--border-maroon); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--accent-gold);" title="Click to update profile picture">
     <?php if ($profilePicPath): ?>
      <img src="<?= h($profilePicPath) ?>" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
@@ -280,6 +277,7 @@ $csrf = signedCsrfToken($csrfSecret);
   </div>
 
   <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
+   <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>"> <!-- ADDED MISSING CSRF TOKEN -->
    <input type="hidden" name="action" value="update_profile_pic">
    <label style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Select new image (JPG, PNG, WebP):</label>
    <input type="file" name="profile_pic" accept="image/png, image/jpeg, image/webp" required style="font-size: 12px; color: var(--text-light);">
