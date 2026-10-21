@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/PdfToText.php';
+require_once dirname(__DIR__) . '/includes/config/storage.php';
 
 class GeminiServices
 {
@@ -297,19 +298,57 @@ class GeminiServices
             $base = realpath($baseDir);
         }
         if ($base === false) {
-            throw new \RuntimeException('Resume storage folder not found: ' . $baseDir);
+            $base = $baseDir;
+            @mkdir($base, 0755, true);
         }
 
-        $full = realpath($base . DIRECTORY_SEPARATOR . ltrim($storedPath, '/\\'));
+        $full = $base . DIRECTORY_SEPARATOR . ltrim($storedPath, '/\\');
+
+        // If the local file is missing (e.g., serverless /tmp container wiped), download it from Supabase Storage
+        if (!is_file($full)) {
+            $dir = dirname($full);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+
+            try {
+                $bucket = 'applicant-resumes';
+                $objectPath = storageObjectPath($bucket, ltrim($storedPath, '/\\'));
+                $signed = storageRequest(
+                    'POST',
+                    'object/sign/' . $objectPath,
+                    json_encode(['expiresIn' => 60], JSON_THROW_ON_ERROR),
+                    ['Content-Type: application/json']
+                );
+                $signedUrl = $signed['signedURL'] ?? '';
+                if (!is_string($signedUrl) || $signedUrl === '') {
+                    [$supabaseUrl] = storageConfig();
+                    $signedUrl = $supabaseUrl . '/storage/v1/object/' . $objectPath;
+                }
+                if (str_starts_with($signedUrl, '/')) {
+                    [$supabaseUrl] = storageConfig();
+                    $signedUrl = $supabaseUrl . '/storage/v1' . $signedUrl;
+                }
+
+                $fileContent = @file_get_contents($signedUrl);
+                if ($fileContent !== false && $fileContent !== '') {
+                    file_put_contents($full, $fileContent);
+                }
+            } catch (\Throwable $e) {
+                error_log('Failed to fetch resume from Supabase storage for parsing: ' . $e->getMessage());
+            }
+        }
+
+        $realFull = realpath($full);
 
         // The file must exist and sit inside the storage folder (blocks ../ tricks).
-        if ($full === false || !is_file($full) || !str_starts_with($full, $base . DIRECTORY_SEPARATOR)) {
+        if ($realFull === false || !is_file($realFull) || !str_starts_with($realFull, $base . DIRECTORY_SEPARATOR)) {
             throw new \RuntimeException('Resume file not found in the storage folder.');
         }
-        if (strtolower(pathinfo($full, PATHINFO_EXTENSION)) !== 'pdf') {
+        if (strtolower(pathinfo($realFull, PATHINFO_EXTENSION)) !== 'pdf') {
             throw new \RuntimeException('Resume file is not a PDF.');
         }
 
-        return $full;
+        return $realFull;
     }
 }
