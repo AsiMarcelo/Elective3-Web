@@ -141,7 +141,9 @@ $csrf = signedCsrfToken($csrfSecret);
 </head>
 <body>
 <aside class="sidebar">
- <div class="logo-container"><div class="brand-mark">4</div><div><div class="logo">4<span>Hire</span></div><div class="logo-subtitle">Applicant portal</div></div></div>
+ <div class="sidebar-logo-container">
+  <img src="/Images/4HIRE-logo.png" alt="4Hire Logo">
+ </div>
  <div class="sidebar-content">
   <div class="menu-title">Main Menu</div>
   <ul class="menu">

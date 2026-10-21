@@ -62,7 +62,6 @@ try {
 
 $companyName = $employerRecord['company_name'] ?? ($_COOKIE['user_name'] ?? 'Employer Company');
 $employerName = $_COOKIE['user_name'] ?? 'Employer Account';
-//$verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
 $verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Pending');
 $profilePicPath = $employerRecord['profile_picture_path'] ?? null;
 
@@ -108,7 +107,10 @@ $csrf = signedCsrfToken($csrfSecret);
 <body>
 
 <aside class="sidebar">
- <div class="sidebar-content" style="padding-top: 20px;">
+ <div class="sidebar-logo-container">
+  <img src="/Images/4HIRE-logo.png" alt="4Hire Logo">
+ </div>
+ <div class="sidebar-content" style="padding-top: 10px;">
   <div class="menu-title">Main Menu</div>
   <ul class="menu">
    <li><a href="#" class="menu-item active" aria-current="page" title="Dashboard" data-section="Dashboard"><i class="menu-icon fa-solid fa-chart-pie"></i><span>Dashboard</span></a></li>
@@ -135,9 +137,6 @@ $csrf = signedCsrfToken($csrfSecret);
 </aside>
 
 <main class="main">
- <div style="width: 100%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
- <img src="/Images/4HIRE-logo.png" alt="4Hire Logo" style="width: 100%; max-height: 90px; height: auto; object-fit: contain;">
-</div>
  <header class="top-header">
   <div>
    <h1 class="page-title">Employer Dashboard</h1>

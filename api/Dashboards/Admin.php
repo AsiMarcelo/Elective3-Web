@@ -151,7 +151,9 @@ if (!$fields) {
 </head>
 <body class="admin-page"><div class="app">
 <aside class="sidebar" id="sidebar">
- <a href="#dashboard" class="brand" aria-label="4Hire dashboard home"><div class="brand-mark">4</div><div><div class="brand-name">4<span>Hire</span></div><div class="brand-sub">Admin workspace</div></div></a>
+ <a href="#dashboard" class="sidebar-logo-container" aria-label="4Hire dashboard home">
+  <img src="/Images/4HIRE-logo.png" alt="4Hire Logo">
+ </a>
  <div class="nav-label">WORKSPACE</div>
  <nav class="nav" aria-label="Main navigation">
   <a class="active" href="#dashboard" data-section="Dashboard"><span class="nav-icon">▦</span>Dashboard</a>
