@@ -110,7 +110,37 @@ foreach ($activityQuery->fetchAll() as $activity) {
 if (!$activities) {
     $activities[] = ['icon'=>'·','title'=>'No verification decisions yet','detail'=>'Reviews you make will appear here.','time'=>'—','tone'=>'cream'];
 }
-$fields = [['Software Development',42,'olive'],['Web Development',28,'terracotta'],['Networking',18,'sage'],['Other / Unsure',12,'cream']];
+
+// Fetch and calculate live AI job field distribution percentages from database records
+$fields = [];
+try {
+    $fieldCounts = [];
+    $fieldStmt = $pdo->query("SELECT ai_suggested_fields FROM public.applicants WHERE ai_suggested_fields IS NOT NULL");
+    while ($row = $fieldStmt->fetch(PDO::FETCH_ASSOC)) {
+        $decoded = json_decode($row['ai_suggested_fields'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $fName) {
+                $fName = trim($fName);
+                if ($fName !== '') {
+                    $fieldCounts[$fName] = ($fieldCounts[$fName] ?? 0) + 1;
+                }
+            }
+        }
+    }
+    arsort($fieldCounts);
+    $fieldColors = ['olive', 'terracotta', 'sage', 'cream'];
+    $cIdx = 0;
+    foreach ($fieldCounts as $fName => $count) {
+        $pct = $applicantCount > 0 ? round(($count / $applicantCount) * 100) : 0;
+        $fields[] = [$fName, $pct, $fieldColors[$cIdx % count($fieldColors)]];
+        $cIdx++;
+    }
+} catch (Throwable $e) {
+    $fields = [];
+}
+if (!$fields) {
+    $fields = [['No AI classifications recorded yet', 0, 'cream']];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -167,13 +197,13 @@ $fields = [['Software Development',42,'olive'],['Web Development',28,'terracotta
 
 <section class="content-grid">
  <article class="panel">
-  <div class="panel-head"><div><h2 class="panel-title">Platform Activity</h2><p class="panel-desc">Applicant registrations over the last 6 months</p></div><a class="text-link" href="#activity">View activity ↗</a></div>
+  <div class="panel-head"><div><h2 class="panel-title">Platform Activity</h2><p class="panel-desc">Live profile registrations on the platform</p></div><a class="text-link" href="#activity">View activity ↗</a></div>
   <div class="chart-summary"><div><strong><?= number_format($applicantCount) ?></strong><span>Applicant profiles</span></div><div><strong><?= number_format($pendingCount) ?></strong><span>Employer reviews pending</span></div></div>
   <div class="note">These totals are read from the live database. Review individual employer contact details in the verification table below.</div>
  </article>
 
  <article class="panel" id="fields">
-  <div class="panel-head"><div><h2 class="panel-title">Applicant Job Fields</h2><p class="panel-desc">Confirmed fields selected by applicants</p></div><a class="text-link" href="#applicants">Details ↗</a></div>
+  <div class="panel-head"><div><h2 class="panel-title">Applicant Job Fields</h2><p class="panel-desc">Classifications extracted from live applicant resumes</p></div><a class="text-link" href="#applicants">Details ↗</a></div>
   <div class="field-list">
   <?php foreach($fields as $f): ?>
    <div class="field-row"><span class="field-name"><?= htmlspecialchars($f[0]) ?></span><span class="field-percent"><?= (int)$f[1] ?>%</span><div class="progress"><span class="<?= htmlspecialchars($f[2]) ?>" style="--value:<?= (int)$f[1] ?>%"></span></div></div>
@@ -222,7 +252,7 @@ $fields = [['Software Development',42,'olive'],['Web Development',28,'terracotta
  <article class="panel">
   <div class="panel-head"><div><h2 class="panel-title">Quick Actions</h2><p class="panel-desc">Common administrator tasks</p></div></div>
   <div class="quick-actions">
-   <button class="quick-action" data-action="Review pending employer verification requests"><span class="quick-icon">♙</span><span><strong>Review Employers</strong><small>12 requests waiting</small></span></button>
+   <button class="quick-action" data-action="Review pending employer verification requests"><span class="quick-icon">♙</span><span><strong>Review Employers</strong><small><?= $pendingCount ?> requests waiting</small></span></button>
    <button class="quick-action" data-action="Open applicant management"><span class="quick-icon">♧</span><span><strong>Manage Applicants</strong><small>View applicant accounts</small></span></button>
    <button class="quick-action" data-action="Open job post moderation"><span class="quick-icon">▤</span><span><strong>Moderate Job Posts</strong><small>Check reported listings</small></span></button>
    <button class="quick-action" data-action="Open privacy and security audit"><span class="quick-icon">♢</span><span><strong>Privacy Audit</strong><small>Review access logs</small></span></button>

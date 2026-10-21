@@ -62,18 +62,19 @@ try {
 
 $companyName = $employerRecord['company_name'] ?? ($_COOKIE['user_name'] ?? 'Employer Company');
 $employerName = $_COOKIE['user_name'] ?? 'Employer Account';
-$verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
+//$verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Verified');
+$verificationStatus = ucfirst($employerRecord['verification_status'] ?? 'Pending');
 $profilePicPath = $employerRecord['profile_picture_path'] ?? null;
 
 // Load classifications config for filtering
 $classificationsConfig = include __DIR__ . '/../../includes/config/classifications.php';
 $allFields = $classificationsConfig['list'] ?? [];
 
-// Fetch live list of all applicant profiles with resumes from the database
+// Fetch live list of all applicant profiles with resumes from the database (including user_id)
 $applicantsList = [];
 try {
     $applicantStmt = $pdo->query(
-        "SELECT u.full_name, a.resume_original_name, a.resume_storage_path, a.ai_suggested_fields, a.resume_keywords, a.resume_uploaded_at
+        "SELECT u.full_name, a.user_id, a.resume_original_name, a.resume_storage_path, a.ai_suggested_fields, a.resume_keywords, a.resume_uploaded_at
          FROM public.applicants a
          JOIN public.users u ON u.id = a.user_id
          WHERE a.resume_uploaded_at IS NOT NULL
@@ -99,7 +100,6 @@ $csrf = signedCsrfToken($csrfSecret);
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="/css/dashboard.css">
 <style>
-  /* Reduce sidebar width by 12px (252px - 12px = 240px) */
   :root {
     --sidebar-width: 240px;
   }
@@ -118,7 +118,6 @@ $csrf = signedCsrfToken($csrfSecret);
   <ul class="menu">
    <li><a href="#" class="menu-item" title="Company Profile" data-section="Company Profile"><i class="menu-icon fa-solid fa-building"></i><span>Company Profile</span></a></li>
    
-   <!-- Employer Verification Widget with verified circle to the left of the text -->
    <div style="padding: 12px 14px; margin: 8px 8px; background: rgba(0,0,0,0.25); border-radius: 10px; border: 1px solid var(--border-maroon); font-size: 12px;">
     <div style="color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">Your account is fully verified to browse applicant profiles and contact candidates.</div>
     <div style="display: flex; align-items: center; gap: 6px; color: #32CD32; font-weight: 600;">
@@ -136,7 +135,6 @@ $csrf = signedCsrfToken($csrfSecret);
 </aside>
 
 <main class="main">
- <!-- 90px Top Banner with 4Hire logo placeholder -->
  <div style="background-color: var(--border-maroon, #800000); height: 90px; display: flex; align-items: center; justify-content: center; padding: 0 24px; border-radius: 12px; margin-bottom: 24px; color: #fff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; box-shadow: var(--shadow);">
   <span>4Hire logo</span>
  </div>
@@ -147,7 +145,6 @@ $csrf = signedCsrfToken($csrfSecret);
    <p class="page-description">Browse and filter live candidate profiles and resumes.</p>
   </div>
   <div style="display: flex; align-items: center; gap: 12px;">
-   <!-- Profile Picture beside user name -->
    <div onclick="openProfileModal()" style="cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: var(--border-maroon); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--accent-gold);" title="Click to update profile picture">
     <?php if ($profilePicPath): ?>
      <img src="<?= h($profilePicPath) ?>" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
@@ -164,7 +161,6 @@ $csrf = signedCsrfToken($csrfSecret);
   </div>
  </header>
 
- <!-- Resume Classification Filter Section -->
  <section class="card" style="margin-bottom: 24px;">
   <div class="card-header">
    <h2 class="card-title">Filter Resumes by Classification</h2>
@@ -180,7 +176,6 @@ $csrf = signedCsrfToken($csrfSecret);
   </div>
  </section>
 
- <!-- Scrollable Multi-Resume Container -->
  <section class="card">
   <div class="card-header">
    <h2 class="card-title">Live Candidate Resumes</h2>
@@ -233,7 +228,7 @@ $csrf = signedCsrfToken($csrfSecret);
 
         <?php if (!empty($applicant['resume_original_name'])): ?>
         <div class="btn-row" style="margin-top: auto;">
-         <a class="btn outline" href="/Auth/Resume.php?action=download" target="_blank" style="width: 100%; justify-content: center;"><i class="fa-solid fa-download"></i>Download Resume</a>
+         <a class="btn outline" href="/Auth/Resume.php?action=download&applicant_id=<?= (int)$applicant['user_id'] ?>" target="_blank" style="width: 100%; justify-content: center;"><i class="fa-solid fa-download"></i>Download Resume</a>
         </div>
         <?php endif; ?>
        </div>
@@ -249,7 +244,6 @@ $csrf = signedCsrfToken($csrfSecret);
 
 </main>
 
-<!-- Profile Picture Modal Popup -->
 <div id="profileModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
  <div style="background: var(--card-maroon); border: 1px solid var(--border-maroon); border-radius: 16px; padding: 24px; width: 360px; max-width: 90%; position: relative; box-shadow: var(--shadow);">
   <button onclick="closeProfileModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-light); font-size: 18px; cursor: pointer;" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
@@ -291,7 +285,6 @@ function closeProfileModal() {
 
 document.querySelectorAll('.menu-item').forEach(l=>l.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.menu-item').forEach(a=>{a.classList.remove('active');a.removeAttribute('aria-current')});l.classList.add('active');l.setAttribute('aria-current','page');if(l.dataset.section!=='Dashboard')showToast(l.dataset.section+' selected — connect this menu to its page or route.')}));
 
-// Interactive Classification Filtering Logic
 const filterButtons = document.querySelectorAll('#filterChips .chip');
 const candidateCards = document.querySelectorAll('.candidate-card');
 const noResultsMsg = document.getElementById('noResultsMsg');
