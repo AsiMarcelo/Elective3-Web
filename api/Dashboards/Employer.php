@@ -135,9 +135,9 @@ $csrf = signedCsrfToken($csrfSecret);
 </aside>
 
 <main class="main">
- <div style="background-color: var(--border-maroon, #800000); height: 90px; display: flex; align-items: center; justify-content: center; padding: 0 24px; border-radius: 12px; margin-bottom: 24px; color: #fff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; box-shadow: var(--shadow);">
-  <span>4Hire logo</span>
- </div>
+ <div style="background-color: var(--border-maroon, #800000); height: 90px; display: flex; align-items: center; justify-content: center; padding: 0 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: var(--shadow);">
+ <img src="/Images/4HIRE-logo.png" alt="4Hire Logo" style="max-height: 60px; height: auto; object-fit: contain;">
+</div>
 
  <header class="top-header">
   <div>

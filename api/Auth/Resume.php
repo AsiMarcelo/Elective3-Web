@@ -7,24 +7,26 @@ require_once $projectRoot . '/includes/config/storage.php';
 startAppSession();
 
 $userId = filter_var($_COOKIE['user_id'] ?? null, FILTER_VALIDATE_INT);
-if (!$userId || ($_COOKIE['user_role'] ?? '') !== 'applicant' || !is_string($_COOKIE['user_sig'] ?? null)) {
+$userRoleCookie = $_COOKIE['user_role'] ?? '';
+
+if (!$userId || !in_array($userRoleCookie, ['applicant', 'employer'], true) || !is_string($_COOKIE['user_sig'] ?? null)) {
     http_response_code(403);
-    exit('Applicant access required.');
+    exit('Access denied.');
 }
 
 try {
     $authPdo = getDbConnection();
     $authQuery = $authPdo->prepare(
-        "SELECT id, password_hash FROM public.users WHERE id = :user_id AND role = 'applicant' LIMIT 1"
+        "SELECT id, password_hash, role FROM public.users WHERE id = :user_id LIMIT 1"
     );
     $authQuery->execute(['user_id' => $userId]);
     $authUser = $authQuery->fetch(PDO::FETCH_ASSOC);
     $expectedSignature = $authUser
-        ? hash_hmac('sha256', $authUser['id'] . '|applicant', $authUser['password_hash'])
+        ? hash_hmac('sha256', $authUser['id'] . '|' . $authUser['role'], $authUser['password_hash'])
         : '';
     if (!$authUser || !hash_equals($expectedSignature, $_COOKIE['user_sig'])) {
         http_response_code(403);
-        exit('Applicant access required.');
+        exit('Access denied.');
     }
 } catch (Throwable $e) {
     error_log('Resume authorization failed: ' . $e->getMessage());
@@ -32,7 +34,7 @@ try {
     exit('Unable to verify your account right now. Please try again.');
 }
 
-$userId = (int) $userId;
+$userRole = $authUser['role'];
 $bucket = 'applicant-resumes';
 
 function resumeRedirect(string $result): never
@@ -41,10 +43,10 @@ function resumeRedirect(string $result): never
     exit();
 }
 
-function applicantResumePath(PDO $pdo, int $userId): ?string
+function applicantResumePath(PDO $pdo, int $targetUserId): ?string
 {
     $query = $pdo->prepare('SELECT resume_storage_path FROM public.applicants WHERE user_id = :user_id');
-    $query->execute(['user_id' => $userId]);
+    $query->execute(['user_id' => $targetUserId]);
     $path = $query->fetchColumn();
     return is_string($path) && $path !== '' ? $path : null;
 }
@@ -52,10 +54,30 @@ function applicantResumePath(PDO $pdo, int $userId): ?string
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'download') {
     try {
         $pdo = getDbConnection();
-        $path = applicantResumePath($pdo, $userId);
+        
+        // Determine whose resume to download based on user role
+        if ($userRole === 'applicant') {
+            $targetUserId = (int) $authUser['id'];
+        } elseif ($userRole === 'employer') {
+            $targetUserId = filter_var($_GET['applicant_id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$targetUserId) {
+                http_response_code(400);
+                exit('Invalid applicant specified.');
+            }
+        } else {
+            http_response_code(403);
+            exit('Unauthorized access.');
+        }
+
+        $path = applicantResumePath($pdo, $targetUserId);
         if ($path === null) {
+            if ($userRole === 'employer') {
+                http_response_code(404);
+                exit('Resume not found.');
+            }
             resumeRedirect('missing');
         }
+
         $signed = storageRequest(
             'POST',
             'object/sign/' . storageObjectPath($bucket, $path),
@@ -74,9 +96,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'downloa
         exit();
     } catch (Throwable $e) {
         error_log('Resume download failed: ' . $e->getMessage());
+        if ($userRole === 'employer') {
+            http_response_code(500);
+            exit('Failed to generate download link.');
+        }
         resumeRedirect('error');
     }
 }
+
+// For applicant-only POST actions (upload/delete)
+if ($userRole !== 'applicant') {
+    http_response_code(403);
+    exit('Applicant access required.');
+}
+
+$targetUserId = (int) $authUser['id'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST'
     || !validSignedCsrfToken($_POST['csrf_token'] ?? null, $_COOKIE['user_sig'])) {
@@ -86,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST'
 
 try {
     $pdo = getDbConnection();
-    $oldPath = applicantResumePath($pdo, $userId);
+    $oldPath = applicantResumePath($pdo, $targetUserId);
     $action = $_POST['action'] ?? '';
 
     if ($action === 'delete') {
@@ -100,7 +134,7 @@ try {
                  resume_path = NULL, resume_text = NULL, resume_keywords = NULL, ai_suggested_fields = NULL, resume_processed_at = NULL
              WHERE user_id = :user_id'
         );
-        $update->execute(['user_id' => $userId]);
+        $update->execute(['user_id' => $targetUserId]);
         try {
             storageRequest('DELETE', 'object/' . rawurlencode($bucket), json_encode(['prefixes' => [$oldPath]], JSON_THROW_ON_ERROR), ['Content-Type: application/json']);
         } catch (Throwable $e) {
@@ -140,7 +174,7 @@ try {
         'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ][$extension];
 
-    $newPath = $userId . '/' . bin2hex(random_bytes(16)) . '.' . $extension;
+    $newPath = $targetUserId . '/' . bin2hex(random_bytes(16)) . '.' . $extension;
     $contents = file_get_contents($file['tmp_name']);
     if ($contents === false) {
         throw new RuntimeException('Could not read the uploaded resume.');
@@ -164,7 +198,7 @@ try {
             'name' => $originalName,
             'mime' => $storageMimeType,
             'size' => (int) $file['size'],
-            'user_id' => $userId,
+            'user_id' => $targetUserId,
         ]);
         if ($update->rowCount() !== 1) {
             throw new RuntimeException('Applicant profile was not found.');
@@ -189,7 +223,7 @@ try {
     // --- GEMINI AI PIPELINE INTEGRATION (Vercel Serverless /tmp Compatible) ---
     if ($extension === 'pdf') {
         try {
-            $localDir = '/tmp/resumes/' . $userId;
+            $localDir = '/tmp/resumes/' . $targetUserId;
             if (!is_dir($localDir)) {
                 @mkdir($localDir, 0755, true);
             }
@@ -197,13 +231,13 @@ try {
             $localFilePath = $localDir . '/' . $localFileName;
             copy($file['tmp_name'], $localFilePath);
 
-            $relativePath = $userId . '/' . $localFileName;
+            $relativePath = $targetUserId . '/' . $localFileName;
             $pathUpdate = $pdo->prepare('UPDATE public.applicants SET resume_path = :path WHERE user_id = :user_id');
-            $pathUpdate->execute(['path' => $relativePath, 'user_id' => $userId]);
+            $pathUpdate->execute(['path' => $relativePath, 'user_id' => $targetUserId]);
 
             require_once dirname(__DIR__, 2) . '/GeminiFuncs/GeminiServices.php';
             $gemini = new GeminiServices($pdo);
-            $gemini->processApplicant($userId);
+            $gemini->processApplicant($targetUserId);
         } catch (Throwable $aiError) {
             error_log('AI Resume processing failed: ' . $aiError->getMessage());
         }
